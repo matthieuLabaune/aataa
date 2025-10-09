@@ -1,0 +1,48 @@
+# Nuxt dev/build outputs
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+
+# Node dependencies
+node_modules
+
+# Logs
+logs
+*.log
+
+# Misc
+.DS_Store
+.fleet
+.idea
+
+# Local env files
+.env
+.env.*
+!.env.example
+
+# Tauri
+src-tauri/target/
+src-tauri/Cargo.lock
+
+# Build artifacts
+*.backup
+test.vue
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+*.dmg
+*.app
+*.exe
+*.msi
+*.deb
+*.AppImage
+
+# Local data
+*.db
+*.db-shm
+*.db-wal
