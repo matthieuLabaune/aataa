@@ -8,6 +8,26 @@
       <p style="margin: 0; white-space: pre-line">{{ statusMessage }}</p>
     </div>
 
+    <!-- Barre de progression multi-fichiers -->
+    <div
+      v-if="processingMultiple"
+      style="position: fixed; bottom: 20px; right: 20px; z-index: 100; background: white; padding: 1rem 1.5rem; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); min-width: 300px"
+    >
+      <p style="margin: 0 0 0.5rem 0; font-weight: 600">
+        Traitement en cours...
+      </p>
+      <div style="background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 0.5rem">
+        <div
+          style="background: #3b82f6; height: 100%; transition: width 0.3s"
+          :style="{ width: `${(processedFiles + failedFiles) / totalFiles * 100}%` }"
+        ></div>
+      </div>
+      <p style="margin: 0; font-size: 0.875rem; color: #6b7280">
+        {{ processedFiles + failedFiles }} / {{ totalFiles }} fichiers
+        <span v-if="failedFiles > 0" style="color: #ef4444">• {{ failedFiles }} échoué(s)</span>
+      </p>
+    </div>
+
     <div class="container" style="padding-top: 2rem; padding-bottom: 2rem">
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
@@ -286,6 +306,12 @@ const showPreview = ref(false)
 const filterType = ref<string>('all')
 const filterTag = ref<string>('all')
 
+// Multi-file processing state
+const processingMultiple = ref(false)
+const totalFiles = ref(0)
+const processedFiles = ref(0)
+const failedFiles = ref(0)
+
 onMounted(() => {
   loadDocuments()
   loadArchivePath()
@@ -328,24 +354,92 @@ async function selectFile() {
 
   try {
     const selected = await openDialog({
-      multiple: false,
+      multiple: true,
       filters: [{
         name: 'Documents',
         extensions: ['pdf', 'png', 'jpg', 'jpeg']
       }]
     })
 
-    console.log('File selected:', selected)
+    console.log('File(s) selected:', selected)
 
-    if (selected && typeof selected === 'string') {
-      await processFile(selected)
-    } else if (!selected) {
+    if (!selected) {
       console.log('No file selected')
+      return
     }
+
+    // Handle single or multiple files
+    const files = Array.isArray(selected) ? selected : [selected]
+
+    if (files.length === 0) {
+      console.log('No files to process')
+      return
+    }
+
+    if (files.length > 100) {
+      showMessage('❌ Maximum 100 fichiers à la fois', 5000)
+      return
+    }
+
+    // Process multiple files
+    await processMultipleFiles(files)
+
   } catch (error) {
     console.error('Error selecting file:', error)
     showMessage('❌ Erreur sélection: ' + error, 5000)
   }
+}
+
+async function processMultipleFiles(files: string[]) {
+  processingMultiple.value = true
+  totalFiles.value = files.length
+  processedFiles.value = 0
+  failedFiles.value = 0
+
+  showMessage(`⏳ Traitement de ${files.length} fichier(s)...`, 30000)
+
+  // Process files in batches of 5 to avoid overwhelming the system
+  const batchSize = 5
+  const results: Document[] = []
+
+  for (let i = 0; i < files.length; i += batchSize) {
+    const batch = files.slice(i, i + batchSize)
+
+    const batchResults = await Promise.allSettled(
+      batch.map(async (filePath) => {
+        try {
+          const doc = await invoke<Document>('process_file', { filePath })
+          processedFiles.value++
+          return doc
+        } catch (error) {
+          console.error('Error processing file:', filePath, error)
+          failedFiles.value++
+          throw error
+        }
+      })
+    )
+
+    // Collect successful results
+    batchResults.forEach(result => {
+      if (result.status === 'fulfilled') {
+        results.push(result.value)
+      }
+    })
+
+    // Update progress message
+    showMessage(
+      `⏳ Traitement: ${processedFiles.value}/${totalFiles.value} réussis, ${failedFiles.value} échoués`,
+      30000
+    )
+  }
+
+  // Add all processed documents to the list
+  documents.value.unshift(...results)
+
+  processingMultiple.value = false
+
+  const summary = `✅ Terminé!\n${processedFiles.value} fichier(s) archivé(s)${failedFiles.value > 0 ? `\n❌ ${failedFiles.value} échec(s)` : ''}`
+  showMessage(summary, 5000)
 }
 
 async function processFile(filePath: string) {
@@ -376,43 +470,64 @@ async function handleDrop(event: DragEvent) {
     return
   }
 
-  const file = files[0]
-  console.log('File dropped:', file.name, file.type)
+  console.log(`${files.length} file(s) dropped`)
 
-  // Vérifier le type de fichier
-  const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']
-  if (!validTypes.includes(file.type) && !file.name.match(/\.(pdf|png|jpe?g)$/i)) {
-    showMessage('⚠️ Type de fichier non supporté. Utilisez PDF, PNG ou JPG.', 4000)
+  if (files.length > 100) {
+    showMessage('❌ Maximum 100 fichiers à la fois', 5000)
     return
   }
 
-  // Pour Tauri, nous devons enregistrer le fichier temporairement
-  // car nous avons besoin du chemin du fichier système, pas du blob
+  // Vérifier les types de fichiers
+  const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']
+  const invalidFiles = Array.from(files).filter(file =>
+    !validTypes.includes(file.type) && !file.name.match(/\.(pdf|png|jpe?g)$/i)
+  )
+
+  if (invalidFiles.length > 0) {
+    showMessage(`⚠️ ${invalidFiles.length} fichier(s) non supporté(s) ignoré(s). Utilisez PDF, PNG ou JPG.`, 4000)
+  }
+
+  const validFiles = Array.from(files).filter(file =>
+    validTypes.includes(file.type) || file.name.match(/\.(pdf|png|jpe?g)$/i)
+  )
+
+  if (validFiles.length === 0) {
+    return
+  }
+
+  // Pour Tauri, nous devons enregistrer les fichiers temporairement
   try {
-    showMessage('⏳ Préparation du fichier...', 3000)
-    // Lire le fichier comme ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer()
-    const uint8Array = new Uint8Array(arrayBuffer)
+    showMessage(`⏳ Préparation de ${validFiles.length} fichier(s)...`, 10000)
 
-    // Créer un chemin temporaire
-    const tempFileName = `aataa_temp_${Date.now()}_${file.name}`
-    const tempPath = `/tmp/${tempFileName}`
+    const tempPaths: string[] = []
 
-    // Écrire le fichier via Tauri FS
-    await invoke('write_temp_file', {
-      path: tempPath,
-      content: Array.from(uint8Array)
-    })
+    for (const file of validFiles) {
+      // Lire le fichier comme ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer()
+      const uint8Array = new Uint8Array(arrayBuffer)
 
-    console.log('Temp file written:', tempPath)
+      // Créer un chemin temporaire
+      const tempFileName = `aataa_temp_${Date.now()}_${file.name}`
+      const tempPath = `/tmp/${tempFileName}`
 
-    // Traiter le fichier
-    await processFile(tempPath)
+      // Écrire le fichier via Tauri FS
+      await invoke('write_temp_file', {
+        path: tempPath,
+        content: Array.from(uint8Array)
+      })
+
+      tempPaths.push(tempPath)
+    }
+
+    // Traiter tous les fichiers
+    await processMultipleFiles(tempPaths)
+    
   } catch (error) {
     console.error('Error handling drop:', error)
     showMessage('❌ Erreur glisser-déposer: ' + error, 5000)
   }
 }
+
 async function deleteDoc(id: string) {
   if (confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) {
     try {
@@ -517,7 +632,7 @@ async function selectArchivePath() {
     }
   } catch (error) {
     console.error('Error selecting archive path:', error)
-    alert('Erreur lors de la sélection du dossier: ' + error)
+    showMessage('❌ Erreur sélection dossier: ' + error, 5000)
   }
 }
 </script>
