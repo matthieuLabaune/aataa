@@ -302,6 +302,9 @@ async function loadDocuments() {
     console.log('Loading documents...')
     documents.value = await invoke<Document[]>('get_documents')
     console.log('Documents loaded:', documents.value.length)
+    if (documents.value.length > 0) {
+      console.log('First document sample:', documents.value[0])
+    }
   } catch (error) {
     console.error('Error loading documents:', error)
     showMessage('❌ Erreur chargement documents: ' + error, 5000)
@@ -431,6 +434,8 @@ function openPreview(doc: Document) {
   previewDocument.value = doc
   showPreview.value = true
   console.log('Preview opened for:', doc.new_name)
+  console.log('OCR text:', doc.ocr_text)
+  console.log('Full document:', doc)
 }
 
 function closePreview() {

@@ -24,12 +24,22 @@ impl OcrEngine {
 
         // Try to extract text directly first
         if let Ok(text) = pdf_extract::extract_text_from_mem(&bytes) {
-            if !text.trim().is_empty() {
+            let trimmed = text.trim();
+            if !trimmed.is_empty() && trimmed.len() > 50 {
+                // If we got meaningful text, return it
                 return Ok(text);
             }
         }
 
-        // If no text or OCR needed, return message
-        Ok("PDF OCR not yet fully implemented. Use image files for now.".to_string())
+        // For scanned PDFs or PDFs without text, we'd need image conversion
+        // For now, try to extract any text we can find
+        let text = pdf_extract::extract_text_from_mem(&bytes).unwrap_or_default();
+        
+        if text.trim().is_empty() {
+            // Return a placeholder for scanned PDFs
+            Ok("Document scanné détecté. OCR complet à implémenter.".to_string())
+        } else {
+            Ok(text)
+        }
     }
 }

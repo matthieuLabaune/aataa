@@ -54,7 +54,7 @@
           @click="$emit('open')"
           title="Ouvrir dans le système"
         >
-          �
+          📂
         </button>
         <button
           class="btn btn-danger"
