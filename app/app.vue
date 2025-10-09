@@ -60,15 +60,47 @@
 
       <!-- Search -->
       <div class="card mb-6">
-        <div style="position: relative">
+        <div style="position: relative; margin-bottom: 1rem">
           <input
             v-model="searchQuery"
             type="text"
             class="input"
             placeholder="🔍 Rechercher dans les documents..."
-            @input="handleSearch"
             style="padding-left: 2.5rem"
           />
+        </div>
+        
+        <!-- Filters -->
+        <div class="flex gap-2" style="flex-wrap: wrap">
+          <div style="flex: 1; min-width: 200px">
+            <label style="display: block; font-size: 0.75rem; font-weight: 500; margin-bottom: 0.25rem; color: #6b7280">Type de document</label>
+            <select v-model="filterType" class="input" style="padding: 0.5rem">
+              <option value="all">📂 Tous les types</option>
+              <option v-for="type in documentTypes.filter(t => t !== 'all')" :key="type" :value="type">
+                {{ type }}
+              </option>
+            </select>
+          </div>
+          
+          <div style="flex: 1; min-width: 200px">
+            <label style="display: block; font-size: 0.75rem; font-weight: 500; margin-bottom: 0.25rem; color: #6b7280">Tag</label>
+            <select v-model="filterTag" class="input" style="padding: 0.5rem">
+              <option value="all">🏷️ Tous les tags</option>
+              <option v-for="tag in allTags.filter(t => t !== 'all')" :key="tag" :value="tag">
+                {{ tag }}
+              </option>
+            </select>
+          </div>
+          
+          <div style="display: flex; align-items: flex-end">
+            <button 
+              @click="filterType = 'all'; filterTag = 'all'; searchQuery = ''"
+              class="btn btn-secondary"
+              style="padding: 0.5rem 1rem"
+            >
+              🔄 Réinitialiser
+            </button>
+          </div>
         </div>
       </div>
 
@@ -76,7 +108,7 @@
       <div class="card">
         <div class="flex items-center justify-between mb-6">
           <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0">
-            Documents archivés ({{ documents.length }})
+            Documents archivés ({{ filteredDocuments.length }}{{ filteredDocuments.length !== documents.length ? ` / ${documents.length}` : '' }})
           </h2>
           <button
             class="btn btn-secondary"
@@ -88,19 +120,27 @@
           </button>
         </div>
 
-        <div v-if="documents.length === 0">
+        <div v-if="filteredDocuments.length === 0">
           <EmptyState
+            v-if="documents.length === 0"
             icon="📄"
             title="Aucun document archivé"
             description="Commencez par importer votre premier document"
+          />
+          <EmptyState
+            v-else
+            icon="🔍"
+            title="Aucun résultat"
+            description="Aucun document ne correspond à vos filtres"
           />
         </div>
 
         <div v-else class="grid">
           <DocumentCard
-            v-for="doc in documents"
+            v-for="doc in filteredDocuments"
             :key="doc.id"
             :document="doc"
+            @preview="openPreview(doc)"
             @open="openDocument(doc.file_path)"
             @delete="deleteDoc(doc.id)"
           />
@@ -148,11 +188,75 @@
         </button>
       </div>
     </div>
+
+    <!-- Preview Modal -->
+    <div
+      v-if="showPreview && previewDocument"
+      style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 100"
+      @click.self="closePreview"
+    >
+      <div class="card" style="max-width: 90vw; max-height: 90vh; width: 800px; overflow: auto; position: relative">
+        <button
+          @click="closePreview"
+          style="position: absolute; top: 1rem; right: 1rem; background: #ef4444; color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 1.25rem"
+          title="Fermer"
+        >
+          ✕
+        </button>
+        
+        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem; padding-right: 3rem">
+          {{ previewDocument.new_name }}
+        </h2>
+        
+        <div style="display: grid; gap: 1rem">
+          <!-- Metadata -->
+          <div style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem">
+            <div class="flex gap-2" style="flex-wrap: wrap; margin-bottom: 0.5rem">
+              <span :class="['badge', `badge-${typeColors[previewDocument.document_type] || 'gray'}`]">
+                {{ previewDocument.document_type }}
+              </span>
+              <span
+                v-for="tag in previewDocument.tags"
+                :key="tag"
+                class="badge badge-gray"
+              >
+                {{ tag }}
+              </span>
+            </div>
+            <p class="text-sm text-gray-600" style="margin: 0.5rem 0">
+              <strong>Fichier original:</strong> {{ previewDocument.original_name }}
+            </p>
+            <p class="text-sm text-gray-600" style="margin: 0.5rem 0">
+              <strong>Date:</strong> {{ new Date(previewDocument.created_at).toLocaleString('fr-FR') }}
+            </p>
+            <p class="text-sm text-gray-600" style="margin: 0.5rem 0">
+              <strong>Taille:</strong> {{ formatFileSize(previewDocument.file_size) }}
+            </p>
+          </div>
+          
+          <!-- OCR Text -->
+          <div v-if="previewDocument.ocr_text">
+            <h3 style="font-weight: 600; margin-bottom: 0.5rem">Texte extrait (OCR)</h3>
+            <div style="background: white; border: 1px solid #d1d5db; border-radius: 0.5rem; padding: 1rem; max-height: 400px; overflow-y: auto; white-space: pre-wrap; font-family: monospace; font-size: 0.875rem">{{ previewDocument.ocr_text }}</div>
+          </div>
+          
+          <!-- Actions -->
+          <div class="flex gap-2">
+            <button class="btn btn-primary" @click="openDocument(previewDocument.file_path)">
+              📂 Ouvrir dans le système
+            </button>
+            <button class="btn btn-danger" @click="deleteDoc(previewDocument.id); closePreview()">
+              🗑 Supprimer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 
@@ -175,6 +279,10 @@ const showSettings = ref(false)
 const archivePath = ref('')
 const statusMessage = ref('')
 const showStatus = ref(false)
+const previewDocument = ref<Document | null>(null)
+const showPreview = ref(false)
+const filterType = ref<string>('all')
+const filterTag = ref<string>('all')
 
 onMounted(() => {
   loadDocuments()
@@ -300,21 +408,6 @@ async function handleDrop(event: DragEvent) {
     showMessage('❌ Erreur glisser-déposer: ' + error, 5000)
   }
 }
-
-async function handleSearch() {
-  if (searchQuery.value.trim()) {
-    try {
-      documents.value = await invoke<Document[]>('search_documents', {
-        query: searchQuery.value
-      })
-    } catch (error) {
-      console.error('Error searching:', error)
-    }
-  } else {
-    loadDocuments()
-  }
-}
-
 async function deleteDoc(id: string) {
   if (confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) {
     try {
@@ -333,6 +426,72 @@ async function openDocument(filePath: string) {
     console.error('Error opening file:', error)
   }
 }
+
+function openPreview(doc: Document) {
+  previewDocument.value = doc
+  showPreview.value = true
+  console.log('Preview opened for:', doc.new_name)
+}
+
+function closePreview() {
+  showPreview.value = false
+  previewDocument.value = null
+}
+
+const typeColors: Record<string, string> = {
+  'Facture': 'blue',
+  'Contrat': 'blue',
+  'Relevé bancaire': 'green',
+  'Bulletin de paie': 'yellow',
+  'Document officiel': 'blue',
+  'Reçu': 'yellow',
+  'Unknown': 'gray'
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+// Computed pour les documents filtrés
+const filteredDocuments = computed(() => {
+  let result = documents.value
+
+  // Filtre par type
+  if (filterType.value !== 'all') {
+    result = result.filter(doc => doc.document_type === filterType.value)
+  }
+
+  // Filtre par tag
+  if (filterTag.value !== 'all') {
+    result = result.filter(doc => doc.tags.includes(filterTag.value))
+  }
+
+  // Filtre par recherche
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(doc => 
+      doc.new_name.toLowerCase().includes(query) ||
+      doc.original_name.toLowerCase().includes(query) ||
+      doc.ocr_text.toLowerCase().includes(query) ||
+      doc.tags.some(tag => tag.toLowerCase().includes(query))
+    )
+  }
+
+  return result
+})
+
+// Listes uniques pour les filtres
+const documentTypes = computed(() => {
+  const types = new Set(documents.value.map(doc => doc.document_type))
+  return ['all', ...Array.from(types)]
+})
+
+const allTags = computed(() => {
+  const tags = new Set(documents.value.flatMap(doc => doc.tags))
+  return ['all', ...Array.from(tags)]
+})
 
 async function selectArchivePath() {
   try {

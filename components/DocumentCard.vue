@@ -41,12 +41,20 @@
 
       <div class="flex gap-2" style="margin-left: 1rem">
         <button
+          class="btn btn-primary"
+          style="padding: 0.5rem; width: 36px; height: 36px"
+          @click="$emit('preview')"
+          title="Prévisualiser"
+        >
+          🔍
+        </button>
+        <button
           class="btn btn-secondary"
           style="padding: 0.5rem; width: 36px; height: 36px"
           @click="$emit('open')"
-          title="Ouvrir"
+          title="Ouvrir dans le système"
         >
-          👁
+          �
         </button>
         <button
           class="btn btn-danger"
@@ -81,6 +89,7 @@ const props = defineProps<{
 }>()
 
 defineEmits<{
+  preview: []
   open: []
   delete: []
 }>()
