@@ -48,9 +48,14 @@ pub async fn process_file(
     let tags = state.classifier.extract_tags(&ocr_text);
     let new_name = state.classifier.generate_filename(&doc_type, &original_name);
 
-    // Copy file to archive
+    // Copy file to archive with folder organization
     let archive_path = state.archive_path.lock().map_err(|e| e.to_string())?;
-    let new_path = archive_path.join(&new_name);
+    
+    // Create subfolder for document type
+    let type_folder = archive_path.join(&doc_type.name);
+    std::fs::create_dir_all(&type_folder).map_err(|e| e.to_string())?;
+    
+    let new_path = type_folder.join(&new_name);
 
     std::fs::copy(&path, &new_path).map_err(|e| e.to_string())?;
 

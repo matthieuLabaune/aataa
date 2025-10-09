@@ -197,6 +197,23 @@
           </div>
         </div>
 
+        <div style="margin-bottom: 1rem">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer">
+            <input
+              type="checkbox"
+              checked
+              disabled
+              style="width: 18px; height: 18px"
+            />
+            <span style="font-size: 0.875rem; font-weight: 500">
+              Organisation automatique par dossiers
+            </span>
+          </label>
+          <p style="font-size: 0.75rem; color: #6b7280; margin: 0.25rem 0 0 1.75rem">
+            Les documents sont automatiquement classés dans des dossiers par type (Factures, Contrats, etc.)
+          </p>
+        </div>
+
         <div style="background: #dbeafe; border: 1px solid #93c5fd; border-radius: 0.375rem; padding: 0.75rem; margin-bottom: 1rem">
           <p style="font-size: 0.875rem; color: #1e40af; margin: 0">
             ℹ️ Tous les documents sont stockés localement et hors ligne.
