@@ -69,7 +69,7 @@
             style="padding-left: 2.5rem"
           />
         </div>
-        
+
         <!-- Filters -->
         <div class="flex gap-2" style="flex-wrap: wrap">
           <div style="flex: 1; min-width: 200px">
@@ -81,7 +81,7 @@
               </option>
             </select>
           </div>
-          
+
           <div style="flex: 1; min-width: 200px">
             <label style="display: block; font-size: 0.75rem; font-weight: 500; margin-bottom: 0.25rem; color: #6b7280">Tag</label>
             <select v-model="filterTag" class="input" style="padding: 0.5rem">
@@ -91,9 +91,9 @@
               </option>
             </select>
           </div>
-          
+
           <div style="display: flex; align-items: flex-end">
-            <button 
+            <button
               @click="filterType = 'all'; filterTag = 'all'; searchQuery = ''"
               class="btn btn-secondary"
               style="padding: 0.5rem 1rem"
@@ -203,11 +203,11 @@
         >
           ✕
         </button>
-        
+
         <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem; padding-right: 3rem">
           {{ previewDocument.new_name }}
         </h2>
-        
+
         <div style="display: grid; gap: 1rem">
           <!-- Metadata -->
           <div style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem">
@@ -233,13 +233,13 @@
               <strong>Taille:</strong> {{ formatFileSize(previewDocument.file_size) }}
             </p>
           </div>
-          
+
           <!-- OCR Text -->
           <div v-if="previewDocument.ocr_text">
             <h3 style="font-weight: 600; margin-bottom: 0.5rem">Texte extrait (OCR)</h3>
             <div style="background: white; border: 1px solid #d1d5db; border-radius: 0.5rem; padding: 1rem; max-height: 400px; overflow-y: auto; white-space: pre-wrap; font-family: monospace; font-size: 0.875rem">{{ previewDocument.ocr_text }}</div>
           </div>
-          
+
           <!-- Actions -->
           <div class="flex gap-2">
             <button class="btn btn-primary" @click="openDocument(previewDocument.file_path)">
@@ -259,6 +259,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
+import DocumentCard from '../components/DocumentCard.vue'
+import EmptyState from '../components/EmptyState.vue'
 
 interface Document {
   id: string
@@ -323,7 +325,7 @@ async function loadArchivePath() {
 
 async function selectFile() {
   console.log('selectFile called!')
-  
+
   try {
     const selected = await openDialog({
       multiple: false,
@@ -334,7 +336,7 @@ async function selectFile() {
     })
 
     console.log('File selected:', selected)
-    
+
     if (selected && typeof selected === 'string') {
       await processFile(selected)
     } else if (!selected) {
@@ -350,7 +352,7 @@ async function processFile(filePath: string) {
   processing.value = true
   console.log('Processing file:', filePath)
   showMessage('⏳ Traitement en cours...', 10000)
-  
+
   try {
     const doc = await invoke<Document>('process_file', { filePath })
     console.log('Document processed:', doc)
@@ -367,23 +369,23 @@ async function processFile(filePath: string) {
 async function handleDrop(event: DragEvent) {
   event.preventDefault()
   console.log('Drop event triggered!')
-  
+
   const files = event.dataTransfer?.files
   if (!files || files.length === 0) {
     console.log('No files dropped')
     return
   }
-  
+
   const file = files[0]
   console.log('File dropped:', file.name, file.type)
-  
+
   // Vérifier le type de fichier
   const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']
   if (!validTypes.includes(file.type) && !file.name.match(/\.(pdf|png|jpe?g)$/i)) {
     showMessage('⚠️ Type de fichier non supporté. Utilisez PDF, PNG ou JPG.', 4000)
     return
   }
-  
+
   // Pour Tauri, nous devons enregistrer le fichier temporairement
   // car nous avons besoin du chemin du fichier système, pas du blob
   try {
@@ -391,19 +393,19 @@ async function handleDrop(event: DragEvent) {
     // Lire le fichier comme ArrayBuffer
     const arrayBuffer = await file.arrayBuffer()
     const uint8Array = new Uint8Array(arrayBuffer)
-    
+
     // Créer un chemin temporaire
     const tempFileName = `aataa_temp_${Date.now()}_${file.name}`
     const tempPath = `/tmp/${tempFileName}`
-    
+
     // Écrire le fichier via Tauri FS
     await invoke('write_temp_file', {
       path: tempPath,
       content: Array.from(uint8Array)
     })
-    
+
     console.log('Temp file written:', tempPath)
-    
+
     // Traiter le fichier
     await processFile(tempPath)
   } catch (error) {
@@ -476,7 +478,7 @@ const filteredDocuments = computed(() => {
   // Filtre par recherche
   if (searchQuery.value.trim()) {
     const query = searchQuery.value.toLowerCase()
-    result = result.filter(doc => 
+    result = result.filter(doc =>
       doc.new_name.toLowerCase().includes(query) ||
       doc.original_name.toLowerCase().includes(query) ||
       doc.ocr_text.toLowerCase().includes(query) ||
@@ -506,7 +508,7 @@ async function selectArchivePath() {
     })
 
     console.log('Directory selected:', selected)
-    
+
     if (selected && typeof selected === 'string') {
       await invoke('set_archive_path', { path: selected })
       archivePath.value = selected

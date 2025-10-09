@@ -1,9 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
-    devtools: { enabled: true },
+    devtools: { enabled: false },
     ssr: false,
-    app: { 
+    app: {
         baseURL: './',
         head: {
             link: [
@@ -11,6 +11,18 @@ export default defineNuxtConfig({
             ]
         }
     },
-    devServer: { host: '127.0.0.1', port: 3000 },
-    nitro: { preset: 'static' },
+    devServer: { 
+        host: '127.0.0.1', 
+        port: 3000,
+    },
+    nitro: { 
+        preset: 'static'
+    },
+    vite: {
+        server: {
+            watch: {
+                ignored: ['**/src-tauri/**', '**/target/**', '**/node_modules/**']
+            }
+        }
+    }
 })

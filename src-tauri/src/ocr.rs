@@ -34,7 +34,7 @@ impl OcrEngine {
         // For scanned PDFs or PDFs without text, we'd need image conversion
         // For now, try to extract any text we can find
         let text = pdf_extract::extract_text_from_mem(&bytes).unwrap_or_default();
-        
+
         if text.trim().is_empty() {
             // Return a placeholder for scanned PDFs
             Ok("Document scanné détecté. OCR complet à implémenter.".to_string())

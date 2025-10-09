@@ -10,7 +10,7 @@
             {{ document.new_name }}
           </h3>
         </div>
-        
+
         <p class="text-sm text-gray-500 mt-2">
           Original: {{ document.original_name }}
         </p>
@@ -39,26 +39,23 @@
         </details>
       </div>
 
-      <div class="flex gap-2" style="margin-left: 1rem">
+      <div class="flex gap-2" style="margin-left: 1rem; flex-shrink: 0">
         <button
-          class="btn btn-primary"
-          style="padding: 0.5rem; width: 36px; height: 36px"
+          class="icon-btn"
           @click="$emit('preview')"
           title="Prévisualiser"
         >
           🔍
         </button>
         <button
-          class="btn btn-secondary"
-          style="padding: 0.5rem; width: 36px; height: 36px"
+          class="icon-btn"
           @click="$emit('open')"
           title="Ouvrir dans le système"
         >
           📂
         </button>
         <button
-          class="btn btn-danger"
-          style="padding: 0.5rem; width: 36px; height: 36px"
+          class="icon-btn icon-btn-danger"
           @click="$emit('delete')"
           title="Supprimer"
         >
@@ -129,3 +126,28 @@ const truncatedText = computed(() => {
   return text.length > 500 ? text.substring(0, 500) + '...' : text
 })
 </script>
+
+<style scoped>
+.icon-btn {
+  padding: 0.5rem;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 1.25rem;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn:hover {
+  background: #f3f4f6;
+}
+
+.icon-btn-danger:hover {
+  background: #fee2e2;
+}
+</style>

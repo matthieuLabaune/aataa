@@ -155,18 +155,9 @@ pub async fn get_archive_path(
 pub async fn write_temp_file(path: String, content: Vec<u8>) -> Result<(), String> {
     use std::fs::File;
     use std::io::Write;
-    
+
     let mut file = File::create(&path).map_err(|e| e.to_string())?;
     file.write_all(&content).map_err(|e| e.to_string())?;
-    
-    Ok(())
-}
 
-#[command]
-pub async fn select_file_dialog() -> Result<Option<String>, String> {
-    // Use native file dialog
-    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
-    // For now, return None - this needs to be implemented with the dialog plugin
-    // properly configured in the app
-    Ok(None)
+    Ok(())
 }
