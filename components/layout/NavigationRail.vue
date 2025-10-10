@@ -18,6 +18,10 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter } from '#app'
+
+const router = useRouter()
+const { activeFilters } = useDocumentFilters()
 const activeItem = ref('types')
 
 const navItems = computed(() => [
@@ -52,7 +56,23 @@ const navItems = computed(() => [
 
 function selectItem(id: string) {
   activeItem.value = id
-  // Emit event or update state
+  
+  // Navigate to appropriate view/filter
+  if (id === 'types') {
+    router.push('/types')
+  } else if (id === 'dashboard') {
+    // TODO: Navigate to dashboard view
+    console.log('Navigate to dashboard')
+  } else if (id === 'tags') {
+    // TODO: Navigate to tags view
+    console.log('Navigate to tags view')
+  } else if (id === 'years') {
+    // TODO: Navigate to years view
+    console.log('Navigate to years view')
+  } else if (id === 'settings') {
+    // TODO: Open settings modal
+    console.log('Open settings')
+  }
 }
 </script>
 
