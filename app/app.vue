@@ -130,20 +130,129 @@
         </div>
       </div>
 
+      <!-- Dashboard Stats -->
+      <div v-if="documents.length > 0" class="card mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0">
+            📊 Statistiques
+          </h2>
+          <button
+            @click="showDashboard = !showDashboard"
+            class="btn btn-secondary"
+            style="padding: 0.5rem 1rem; font-size: 0.875rem"
+          >
+            {{ showDashboard ? '▼ Masquer' : '▶ Afficher' }}
+          </button>
+        </div>
+
+        <div v-if="showDashboard" style="display: grid; gap: 1.5rem">
+          <!-- Stats Overview -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem">
+            <div style="background: #dbeafe; padding: 1rem; border-radius: 0.5rem; text-align: center">
+              <div style="font-size: 2rem; font-weight: bold; color: #1e40af">{{ documents.length }}</div>
+              <div style="font-size: 0.875rem; color: #1e40af; margin-top: 0.25rem">Documents totaux</div>
+            </div>
+            <div style="background: #dcfce7; padding: 1rem; border-radius: 0.5rem; text-align: center">
+              <div style="font-size: 2rem; font-weight: bold; color: #15803d">{{ stats.documentTypes }}</div>
+              <div style="font-size: 0.875rem; color: #15803d; margin-top: 0.25rem">Types différents</div>
+            </div>
+            <div style="background: #fef3c7; padding: 1rem; border-radius: 0.5rem; text-align: center">
+              <div style="font-size: 2rem; font-weight: bold; color: #a16207">{{ stats.totalTags }}</div>
+              <div style="font-size: 0.875rem; color: #a16207; margin-top: 0.25rem">Tags utilisés</div>
+            </div>
+            <div style="background: #f3e8ff; padding: 1rem; border-radius: 0.5rem; text-align: center">
+              <div style="font-size: 2rem; font-weight: bold; color: #6b21a8">{{ stats.totalSize }}</div>
+              <div style="font-size: 0.875rem; color: #6b21a8; margin-top: 0.25rem">Taille totale</div>
+            </div>
+          </div>
+
+          <!-- Documents by Type -->
+          <div>
+            <h3 style="font-weight: 600; margin-bottom: 1rem">📁 Répartition par type</h3>
+            <div style="display: grid; gap: 0.5rem">
+              <div v-for="[type, count] in stats.byType" :key="type" style="display: flex; align-items: center; gap: 0.5rem">
+                <div style="min-width: 150px; font-size: 0.875rem">{{ type }}</div>
+                <div style="flex: 1; background: #e5e7eb; height: 24px; border-radius: 4px; overflow: hidden; position: relative">
+                  <div
+                    :style="{
+                      width: `${(count / documents.length) * 100}%`,
+                      background: typeColors[type] === 'blue' ? '#3b82f6' : typeColors[type] === 'green' ? '#10b981' : typeColors[type] === 'yellow' ? '#f59e0b' : '#6b7280',
+                      height: '100%',
+                      transition: 'width 0.3s'
+                    }"
+                  ></div>
+                </div>
+                <div style="min-width: 60px; text-align: right; font-size: 0.875rem; font-weight: 600">{{ count }} ({{ Math.round((count / documents.length) * 100) }}%)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Documents by Month -->
+          <div>
+            <h3 style="font-weight: 600; margin-bottom: 1rem">📅 Documents par mois (6 derniers mois)</h3>
+            <div style="display: grid; gap: 0.5rem">
+              <div v-for="[month, count] in stats.byMonth" :key="month" style="display: flex; align-items: center; gap: 0.5rem">
+                <div style="min-width: 120px; font-size: 0.875rem">{{ month }}</div>
+                <div style="flex: 1; background: #e5e7eb; height: 24px; border-radius: 4px; overflow: hidden">
+                  <div
+                    :style="{
+                      width: `${(count / Math.max(...stats.byMonth.map(m => m[1]))) * 100}%`,
+                      background: '#8b5cf6',
+                      height: '100%',
+                      transition: 'width 0.3s'
+                    }"
+                  ></div>
+                </div>
+                <div style="min-width: 40px; text-align: right; font-size: 0.875rem; font-weight: 600">{{ count }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Top Tags -->
+          <div>
+            <h3 style="font-weight: 600; margin-bottom: 1rem">🏷️ Tags les plus utilisés</h3>
+            <div class="flex gap-2" style="flex-wrap: wrap">
+              <div
+                v-for="[tag, count] in stats.topTags"
+                :key="tag"
+                class="badge badge-blue"
+                style="font-size: 0.875rem; padding: 0.5rem 1rem"
+              >
+                {{ tag }} ({{ count }})
+              </div>
+              <div v-if="stats.topTags.length === 0" style="color: #6b7280; font-size: 0.875rem">
+                Aucun tag utilisé
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Documents List -->
       <div class="card">
         <div class="flex items-center justify-between mb-6">
           <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0">
             Documents archivés ({{ filteredDocuments.length }}{{ filteredDocuments.length !== documents.length ? ` / ${documents.length}` : '' }})
           </h2>
-          <button
-            class="btn btn-secondary"
-            @click="loadDocuments"
-            style="padding: 0.5rem; width: 36px; height: 36px"
-            title="Actualiser"
-          >
-            🔄
-          </button>
+          <div class="flex gap-2">
+            <button
+              v-if="filteredDocuments.length > 0"
+              class="btn btn-secondary"
+              @click="exportToCSV"
+              style="padding: 0.5rem 1rem; font-size: 0.875rem"
+              title="Exporter en CSV"
+            >
+              📥 Export CSV
+            </button>
+            <button
+              class="btn btn-secondary"
+              @click="loadDocuments"
+              style="padding: 0.5rem; width: 36px; height: 36px"
+              title="Actualiser"
+            >
+              🔄
+            </button>
+          </div>
         </div>
 
         <div v-if="filteredDocuments.length === 0">
@@ -254,27 +363,91 @@
         <div style="display: grid; gap: 1rem">
           <!-- Metadata -->
           <div style="background: #f3f4f6; padding: 1rem; border-radius: 0.5rem">
-            <div class="flex gap-2" style="flex-wrap: wrap; margin-bottom: 0.5rem">
-              <span :class="['badge', `badge-${typeColors[previewDocument.document_type] || 'gray'}`]">
-                {{ previewDocument.document_type }}
-              </span>
-              <span
-                v-for="tag in previewDocument.tags"
-                :key="tag"
-                class="badge badge-gray"
-              >
-                {{ tag }}
-              </span>
+            <div v-if="!editMode">
+              <div class="flex gap-2" style="flex-wrap: wrap; margin-bottom: 0.5rem">
+                <span :class="['badge', `badge-${typeColors[previewDocument.document_type] || 'gray'}`]">
+                  {{ previewDocument.document_type }}
+                </span>
+                <span
+                  v-for="tag in previewDocument.tags"
+                  :key="tag"
+                  class="badge badge-gray"
+                >
+                  {{ tag }}
+                </span>
+              </div>
+              <p class="text-sm text-gray-600" style="margin: 0.5rem 0">
+                <strong>Fichier original:</strong> {{ previewDocument.original_name }}
+              </p>
+              <p class="text-sm text-gray-600" style="margin: 0.5rem 0">
+                <strong>Date:</strong> {{ new Date(previewDocument.created_at).toLocaleString('fr-FR') }}
+              </p>
+              <p class="text-sm text-gray-600" style="margin: 0.5rem 0">
+                <strong>Taille:</strong> {{ formatFileSize(previewDocument.file_size) }}
+              </p>
+              <button @click="editMode = true" class="btn btn-secondary" style="margin-top: 0.5rem; font-size: 0.875rem">
+                ✏️ Modifier les métadonnées
+              </button>
             </div>
-            <p class="text-sm text-gray-600" style="margin: 0.5rem 0">
-              <strong>Fichier original:</strong> {{ previewDocument.original_name }}
-            </p>
-            <p class="text-sm text-gray-600" style="margin: 0.5rem 0">
-              <strong>Date:</strong> {{ new Date(previewDocument.created_at).toLocaleString('fr-FR') }}
-            </p>
-            <p class="text-sm text-gray-600" style="margin: 0.5rem 0">
-              <strong>Taille:</strong> {{ formatFileSize(previewDocument.file_size) }}
-            </p>
+
+            <!-- Edit Mode -->
+            <div v-else>
+              <div style="margin-bottom: 1rem">
+                <label style="display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem">Type de document</label>
+                <select v-model="editedType" class="input">
+                  <option value="Facture">Facture</option>
+                  <option value="Contrat">Contrat</option>
+                  <option value="Relevé bancaire">Relevé bancaire</option>
+                  <option value="Bulletin de paie">Bulletin de paie</option>
+                  <option value="Document officiel">Document officiel</option>
+                  <option value="Reçu">Reçu</option>
+                  <option value="Unknown">Autre</option>
+                </select>
+              </div>
+
+              <div style="margin-bottom: 1rem">
+                <label style="display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem">Nom du fichier</label>
+                <input v-model="editedName" type="text" class="input" />
+              </div>
+
+              <div style="margin-bottom: 1rem">
+                <label style="display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem">Tags (cliquez pour activer/désactiver)</label>
+                <div class="flex gap-2" style="flex-wrap: wrap">
+                  <button
+                    v-for="tag in ['Urgent', 'Important', 'Personnel', 'Professionnel', 'Mensuel']"
+                    :key="tag"
+                    @click="toggleTag(tag)"
+                    :class="['badge', editedTags.includes(tag) ? 'badge-blue' : 'badge-gray']"
+                    style="cursor: pointer"
+                  >
+                    {{ tag }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex gap-2">
+                <button @click="saveMetadata" class="btn btn-primary">
+                  💾 Sauvegarder
+                </button>
+                <button @click="editMode = false" class="btn btn-secondary">
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div>
+            <h3 style="font-weight: 600; margin-bottom: 0.5rem">📝 Notes personnelles</h3>
+            <textarea
+              v-model="editedNotes"
+              class="input"
+              style="min-height: 100px; font-family: inherit; resize: vertical"
+              placeholder="Ajoutez vos notes ici..."
+            ></textarea>
+            <button @click="saveNotes" class="btn btn-primary" style="margin-top: 0.5rem; font-size: 0.875rem">
+              💾 Sauvegarder les notes
+            </button>
           </div>
 
           <!-- OCR Text -->
@@ -315,6 +488,7 @@ interface Document {
   ocr_text: string
   created_at: string
   file_size: number
+  notes?: string
 }
 
 const documents = ref<Document[]>([])
@@ -334,6 +508,16 @@ const processingMultiple = ref(false)
 const totalFiles = ref(0)
 const processedFiles = ref(0)
 const failedFiles = ref(0)
+
+// Edit mode state
+const editMode = ref(false)
+const editedNotes = ref('')
+const editedType = ref('')
+const editedTags = ref<string[]>([])
+const editedName = ref('')
+
+// Dashboard state
+const showDashboard = ref(true)
 
 onMounted(() => {
   loadDocuments()
@@ -585,7 +769,7 @@ async function handleDrop(event: DragEvent) {
 
     // Traiter tous les fichiers
     await processMultipleFiles(tempPaths)
-    
+
   } catch (error) {
     console.error('Error handling drop:', error)
     showMessage('❌ Erreur glisser-déposer: ' + error, 5000)
@@ -614,6 +798,11 @@ async function openDocument(filePath: string) {
 function openPreview(doc: Document) {
   previewDocument.value = doc
   showPreview.value = true
+  editMode.value = false
+  editedNotes.value = doc.notes || ''
+  editedType.value = doc.document_type
+  editedTags.value = [...doc.tags]
+  editedName.value = doc.new_name
   console.log('Preview opened for:', doc.new_name)
   console.log('OCR text:', doc.ocr_text)
   console.log('Full document:', doc)
@@ -622,6 +811,70 @@ function openPreview(doc: Document) {
 function closePreview() {
   showPreview.value = false
   previewDocument.value = null
+  editMode.value = false
+}
+
+async function saveNotes() {
+  if (!previewDocument.value) return
+  
+  try {
+    await invoke('update_notes', {
+      id: previewDocument.value.id,
+      notes: editedNotes.value || null
+    })
+    
+    // Update local document
+    previewDocument.value.notes = editedNotes.value
+    const docIndex = documents.value.findIndex(d => d.id === previewDocument.value!.id)
+    if (docIndex !== -1) {
+      documents.value[docIndex].notes = editedNotes.value
+    }
+    
+    showMessage('✅ Notes sauvegardées', 3000)
+  } catch (error) {
+    console.error('Error saving notes:', error)
+    showMessage('❌ Erreur sauvegarde notes: ' + error, 5000)
+  }
+}
+
+async function saveMetadata() {
+  if (!previewDocument.value) return
+  
+  try {
+    await invoke('update_metadata', {
+      id: previewDocument.value.id,
+      documentType: editedType.value,
+      tags: editedTags.value,
+      newName: editedName.value
+    })
+    
+    // Update local document
+    previewDocument.value.document_type = editedType.value
+    previewDocument.value.tags = [...editedTags.value]
+    previewDocument.value.new_name = editedName.value
+    
+    const docIndex = documents.value.findIndex(d => d.id === previewDocument.value!.id)
+    if (docIndex !== -1) {
+      documents.value[docIndex].document_type = editedType.value
+      documents.value[docIndex].tags = [...editedTags.value]
+      documents.value[docIndex].new_name = editedName.value
+    }
+    
+    editMode.value = false
+    showMessage('✅ Métadonnées mises à jour', 3000)
+  } catch (error) {
+    console.error('Error saving metadata:', error)
+    showMessage('❌ Erreur sauvegarde: ' + error, 5000)
+  }
+}
+
+function toggleTag(tag: string) {
+  const index = editedTags.value.indexOf(tag)
+  if (index === -1) {
+    editedTags.value.push(tag)
+  } else {
+    editedTags.value.splice(index, 1)
+  }
 }
 
 const typeColors: Record<string, string> = {
@@ -661,7 +914,8 @@ const filteredDocuments = computed(() => {
       doc.new_name.toLowerCase().includes(query) ||
       doc.original_name.toLowerCase().includes(query) ||
       doc.ocr_text.toLowerCase().includes(query) ||
-      doc.tags.some(tag => tag.toLowerCase().includes(query))
+      doc.tags.some(tag => tag.toLowerCase().includes(query)) ||
+      (doc.notes && doc.notes.toLowerCase().includes(query))
     )
   }
 
@@ -678,6 +932,107 @@ const allTags = computed(() => {
   const tags = new Set(documents.value.flatMap(doc => doc.tags))
   return ['all', ...Array.from(tags)]
 })
+
+// Dashboard stats
+const stats = computed(() => {
+  // Total size
+  const totalBytes = documents.value.reduce((sum, doc) => sum + doc.file_size, 0)
+  const totalSize = formatFileSize(totalBytes)
+
+  // Document types count
+  const typeCount = new Map<string, number>()
+  documents.value.forEach(doc => {
+    typeCount.set(doc.document_type, (typeCount.get(doc.document_type) || 0) + 1)
+  })
+  const byType = Array.from(typeCount.entries()).sort((a, b) => b[1] - a[1])
+  const documentTypes = typeCount.size
+
+  // Tags count
+  const tagCount = new Map<string, number>()
+  documents.value.forEach(doc => {
+    doc.tags.forEach(tag => {
+      tagCount.set(tag, (tagCount.get(tag) || 0) + 1)
+    })
+  })
+  const topTags = Array.from(tagCount.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+  const totalTags = tagCount.size
+
+  // Documents by month (last 6 months)
+  const monthCount = new Map<string, number>()
+  const now = new Date()
+  const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+  
+  documents.value.forEach(doc => {
+    const date = new Date(doc.created_at)
+    const key = `${monthNames[date.getMonth()]} ${date.getFullYear()}`
+    monthCount.set(key, (monthCount.get(key) || 0) + 1)
+  })
+  
+  // Get last 6 months
+  const last6Months: Array<[string, number]> = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`
+    last6Months.push([key, monthCount.get(key) || 0])
+  }
+
+  return {
+    totalSize,
+    documentTypes,
+    totalTags,
+    byType,
+    byMonth: last6Months,
+    topTags
+  }
+})
+
+function exportToCSV() {
+  try {
+    // Préparer les données CSV
+    const headers = ['ID', 'Nom', 'Nom original', 'Type', 'Tags', 'Date', 'Taille', 'Chemin', 'Notes']
+    const rows = filteredDocuments.value.map(doc => [
+      doc.id,
+      doc.new_name,
+      doc.original_name,
+      doc.document_type,
+      doc.tags.join('; '),
+      new Date(doc.created_at).toLocaleString('fr-FR'),
+      formatFileSize(doc.file_size),
+      doc.file_path,
+      doc.notes || ''
+    ])
+
+    // Échapper les guillemets et virgules pour CSV
+    const escapeCSV = (value: string) => {
+      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`
+      }
+      return value
+    }
+
+    // Créer le contenu CSV
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => escapeCSV(String(cell))).join(','))
+    ].join('\n')
+
+    // Créer un blob et télécharger
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `aataa_export_${new Date().toISOString().split('T')[0]}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+
+    showMessage(`✅ Export réussi : ${filteredDocuments.value.length} document(s)`, 3000)
+  } catch (error) {
+    console.error('Error exporting CSV:', error)
+    showMessage('❌ Erreur export CSV: ' + error, 5000)
+  }
+}
 
 async function selectArchivePath() {
   try {

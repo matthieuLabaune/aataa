@@ -20,18 +20,22 @@ impl Database {
                 tags TEXT NOT NULL,
                 ocr_text TEXT,
                 created_at TEXT NOT NULL,
-                file_size INTEGER NOT NULL
+                file_size INTEGER NOT NULL,
+                notes TEXT
             )",
             [],
         )?;
+
+        // Add notes column if it doesn't exist (migration)
+        let _ = conn.execute("ALTER TABLE documents ADD COLUMN notes TEXT", []);
 
         Ok(Database { conn })
     }
 
     pub fn insert_document(&self, doc: &Document) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO documents (id, original_name, new_name, file_path, document_type, tags, ocr_text, created_at, file_size)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT INTO documents (id, original_name, new_name, file_path, document_type, tags, ocr_text, created_at, file_size, notes)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             rusqlite::params![
                 doc.id,
                 doc.original_name,
@@ -42,6 +46,7 @@ impl Database {
                 doc.ocr_text,
                 doc.created_at,
                 doc.file_size as i64,
+                doc.notes,
             ],
         )?;
         Ok(())
@@ -49,7 +54,7 @@ impl Database {
 
     pub fn get_all_documents(&self) -> Result<Vec<Document>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, original_name, new_name, file_path, document_type, tags, ocr_text, created_at, file_size
+            "SELECT id, original_name, new_name, file_path, document_type, tags, ocr_text, created_at, file_size, notes
              FROM documents ORDER BY created_at DESC"
         )?;
 
@@ -64,6 +69,7 @@ impl Database {
                 ocr_text: row.get(6)?,
                 created_at: row.get(7)?,
                 file_size: row.get::<_, i64>(8)? as u64,
+                notes: row.get(9).ok(),
             })
         })?
         .collect::<Result<Vec<_>>>()?;
@@ -73,9 +79,9 @@ impl Database {
 
     pub fn search_documents(&self, query: &str) -> Result<Vec<Document>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, original_name, new_name, file_path, document_type, tags, ocr_text, created_at, file_size
+            "SELECT id, original_name, new_name, file_path, document_type, tags, ocr_text, created_at, file_size, notes
              FROM documents
-             WHERE ocr_text LIKE ?1 OR new_name LIKE ?1 OR tags LIKE ?1
+             WHERE ocr_text LIKE ?1 OR new_name LIKE ?1 OR tags LIKE ?1 OR notes LIKE ?1
              ORDER BY created_at DESC"
         )?;
 
@@ -91,6 +97,7 @@ impl Database {
                 ocr_text: row.get(6)?,
                 created_at: row.get(7)?,
                 file_size: row.get::<_, i64>(8)? as u64,
+                notes: row.get(9).ok(),
             })
         })?
         .collect::<Result<Vec<_>>>()?;
@@ -100,6 +107,27 @@ impl Database {
 
     pub fn delete_document(&self, id: &str) -> Result<()> {
         self.conn.execute("DELETE FROM documents WHERE id = ?1", [id])?;
+        Ok(())
+    }
+
+    pub fn update_document_notes(&self, id: &str, notes: Option<String>) -> Result<()> {
+        self.conn.execute(
+            "UPDATE documents SET notes = ?1 WHERE id = ?2",
+            rusqlite::params![notes, id],
+        )?;
+        Ok(())
+    }
+
+    pub fn update_document_metadata(&self, id: &str, document_type: &str, tags: &Vec<String>, new_name: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE documents SET document_type = ?1, tags = ?2, new_name = ?3 WHERE id = ?4",
+            rusqlite::params![
+                document_type,
+                serde_json::to_string(tags).unwrap_or_default(),
+                new_name,
+                id
+            ],
+        )?;
         Ok(())
     }
 }

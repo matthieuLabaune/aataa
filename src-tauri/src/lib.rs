@@ -63,6 +63,8 @@ pub fn run() {
       commands::get_archive_path,
       commands::scan_folder,
       commands::write_temp_file,
+      commands::update_notes,
+      commands::update_metadata,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

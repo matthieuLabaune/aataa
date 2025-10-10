@@ -73,11 +73,11 @@ pub async fn process_file(
 
     // Copy file to archive with folder organization: TYPE/YEAR/
     let archive_path = state.archive_path.lock().map_err(|e| e.to_string())?;
-    
+
     // Create subfolder structure: DocumentType/Year/
     let type_folder = archive_path.join(&doc_type.name).join(&year);
     std::fs::create_dir_all(&type_folder).map_err(|e| e.to_string())?;
-    
+
     let new_path = type_folder.join(&new_name);
 
     std::fs::copy(&path, &new_path).map_err(|e| e.to_string())?;
@@ -93,6 +93,7 @@ pub async fn process_file(
         ocr_text,
         created_at: Local::now().to_rfc3339(),
         file_size,
+        notes: None,
     };
 
     // Save to database
@@ -228,3 +229,24 @@ pub async fn write_temp_file(path: String, content: Vec<u8>) -> Result<(), Strin
     Ok(())
 }
 
+#[command]
+pub async fn update_notes(
+    id: String,
+    notes: Option<String>,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.update_document_notes(&id, notes).map_err(|e| e.to_string())
+}
+
+#[command]
+pub async fn update_metadata(
+    id: String,
+    document_type: String,
+    tags: Vec<String>,
+    new_name: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.update_document_metadata(&id, &document_type, &tags, &new_name).map_err(|e| e.to_string())
+}

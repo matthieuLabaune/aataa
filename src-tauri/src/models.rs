@@ -11,6 +11,7 @@ pub struct Document {
     pub ocr_text: String,
     pub created_at: String,
     pub file_size: u64,
+    pub notes: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
