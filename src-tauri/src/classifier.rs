@@ -216,7 +216,7 @@ mod tests {
         };
         let original_name = "document.pdf";
         let filename = classifier.generate_filename(&doc_type, original_name);
-        
+
         assert!(filename.starts_with("FACT_"));
         assert!(filename.ends_with(".pdf"));
         assert!(filename.len() > 10); // FACT_ + date + .pdf
@@ -232,7 +232,7 @@ mod tests {
         };
         let original_name = "document_without_extension";
         let filename = classifier.generate_filename(&doc_type, original_name);
-        
+
         assert!(filename.starts_with("TEST_"));
         assert!(filename.ends_with(".txt")); // Default extension
     }

@@ -2,9 +2,9 @@
 
 ## 📊 Vue d'ensemble
 
-**Date**: $(date +"%Y-%m-%d %H:%M")  
-**Total de tests**: 32 ✅  
-**Réussite**: 100%  
+**Date**: $(date +"%Y-%m-%d %H:%M")
+**Total de tests**: 32 ✅
+**Réussite**: 100%
 
 ## 📋 Tests par Module
 

@@ -432,7 +432,7 @@ $wide: 1920px;
 1. **Priorité Desktop-first puis Mobile**: Commencer par la version desktop 3-pane, puis adapter responsive
 2. **State Management**: Utiliser `useState` Nuxt pour filtres actifs, vue sélectionnée
 3. **Performances**: Virtualisation pour listes longues (>100 items)
-4. **Accessibilité**: 
+4. **Accessibilité**:
    - Navigation clavier (Tab, Arrow keys)
    - ARIA labels sur Navigation Rail
    - Focus management sur modal/preview

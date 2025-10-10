@@ -24,7 +24,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let db_path = dir.path().join("test.db");
         let _db = Database::new(db_path).unwrap();
-        
+
         // If we get here, database was created successfully
         assert!(true);
     }
@@ -70,7 +70,7 @@ mod tests {
 
         let mut doc1 = create_test_document("search1");
         doc1.ocr_text = "This contains the word facture".to_string();
-        
+
         let mut doc2 = create_test_document("search2");
         doc2.ocr_text = "This contains the word contrat".to_string();
 
@@ -126,9 +126,9 @@ mod tests {
 
         let new_tags = vec!["tag1".to_string(), "tag2".to_string()];
         db.update_document_metadata(
-            "meta_test", 
-            "Contrat", 
-            &new_tags, 
+            "meta_test",
+            "Contrat",
+            &new_tags,
             "new_filename.pdf"
         ).unwrap();
 
@@ -157,14 +157,14 @@ mod tests {
     fn test_migration_adds_notes_column() {
         let dir = tempdir().unwrap();
         let db_path = dir.path().join("test.db");
-        
+
         // Create database (which runs migration)
         let db = Database::new(db_path.clone()).unwrap();
-        
+
         // Insert document with notes
         let doc = create_test_document("migration_test");
         db.insert_document(&doc).unwrap();
-        
+
         // Verify notes are saved
         let docs = db.get_all_documents().unwrap();
         assert!(docs[0].notes.is_some());

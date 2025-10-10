@@ -60,7 +60,7 @@ mod tests {
     fn test_extract_text_from_pdf_empty() {
         // Create a minimal PDF structure (simplified for testing)
         let mut temp_file = NamedTempFile::new().unwrap();
-        
+
         // Write minimal PDF header and trailer (this will be recognized as PDF but have no text)
         temp_file.write_all(b"%PDF-1.4\n").unwrap();
         temp_file.write_all(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n").unwrap();
@@ -76,7 +76,7 @@ mod tests {
         let result = engine.extract_text_from_pdf(temp_file.path());
 
         assert!(result.is_ok(), "PDF extraction should not fail");
-        
+
         // Empty PDF should return the scanned document message
         let text = result.unwrap();
         assert!(
@@ -96,7 +96,7 @@ mod tests {
     // Note: Image OCR tests require tesseract to be installed and configured
     // These are integration tests that would need actual image files
     // For unit tests, we verify the error handling paths
-    
+
     #[test]
     fn test_extract_text_from_invalid_image() {
         let mut engine = OcrEngine::new().unwrap();
@@ -105,4 +105,3 @@ mod tests {
         assert!(result.is_err(), "Should fail for nonexistent image file");
     }
 }
-

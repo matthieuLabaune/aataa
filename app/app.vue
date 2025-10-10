@@ -815,20 +815,20 @@ function closePreview() {
 
 async function saveNotes() {
   if (!previewDocument.value) return
-  
+
   try {
     await invoke('update_notes', {
       id: previewDocument.value.id,
       notes: editedNotes.value || null
     })
-    
+
     // Update local document
     previewDocument.value.notes = editedNotes.value
     const docIndex = documents.value.findIndex(d => d.id === previewDocument.value!.id)
     if (docIndex !== -1) {
       documents.value[docIndex].notes = editedNotes.value
     }
-    
+
     showMessage('✅ Notes sauvegardées', 3000)
   } catch (error) {
     console.error('Error saving notes:', error)
@@ -838,7 +838,7 @@ async function saveNotes() {
 
 async function saveMetadata() {
   if (!previewDocument.value) return
-  
+
   try {
     await invoke('update_metadata', {
       id: previewDocument.value.id,
@@ -846,19 +846,19 @@ async function saveMetadata() {
       tags: editedTags.value,
       newName: editedName.value
     })
-    
+
     // Update local document
     previewDocument.value.document_type = editedType.value
     previewDocument.value.tags = [...editedTags.value]
     previewDocument.value.new_name = editedName.value
-    
+
     const docIndex = documents.value.findIndex(d => d.id === previewDocument.value!.id)
     if (docIndex !== -1) {
       documents.value[docIndex].document_type = editedType.value
       documents.value[docIndex].tags = [...editedTags.value]
       documents.value[docIndex].new_name = editedName.value
     }
-    
+
     editMode.value = false
     showMessage('✅ Métadonnées mises à jour', 3000)
   } catch (error) {
@@ -962,13 +962,13 @@ const stats = computed(() => {
   const monthCount = new Map<string, number>()
   const now = new Date()
   const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
-  
+
   documents.value.forEach(doc => {
     const date = new Date(doc.created_at)
     const key = `${monthNames[date.getMonth()]} ${date.getFullYear()}`
     monthCount.set(key, (monthCount.get(key) || 0) + 1)
   })
-  
+
   // Get last 6 months
   const last6Months: Array<[string, number]> = []
   for (let i = 5; i >= 0; i--) {

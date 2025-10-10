@@ -2,9 +2,9 @@
 
 ## 📋 Résumé Exécutif
 
-**Objectif**: Transformer AATAA en gestionnaire de documents Material 3 avec navigation multi-pane  
-**Durée estimée**: 2-3 heures  
-**Approche**: Vanilla CSS + Material Tokens (contrôle total, léger)  
+**Objectif**: Transformer AATAA en gestionnaire de documents Material 3 avec navigation multi-pane
+**Durée estimée**: 2-3 heures
+**Approche**: Vanilla CSS + Material Tokens (contrôle total, léger)
 **Stratégie**: Desktop-first → Tablet → Mobile
 
 ---
@@ -474,33 +474,33 @@ export const useDocumentFilters = () => {
   }))
 
   const viewMode = useState('viewMode', () => 'grid' as 'grid' | 'list')
-  
+
   const selectedDocument = useState('selectedDocument', () => null as Document | null)
 
   const filteredDocuments = computed(() => {
     let docs = documents.value
-    
+
     if (activeFilters.value.type) {
       docs = docs.filter(d => d.document_type === activeFilters.value.type)
     }
-    
+
     if (activeFilters.value.year) {
       docs = docs.filter(d => d.created_at.includes(activeFilters.value.year!))
     }
-    
+
     if (activeFilters.value.tags.length > 0) {
-      docs = docs.filter(d => 
+      docs = docs.filter(d =>
         activeFilters.value.tags.some(tag => d.tags.includes(tag))
       )
     }
-    
+
     if (activeFilters.value.search) {
-      docs = docs.filter(d => 
+      docs = docs.filter(d =>
         d.new_name.toLowerCase().includes(activeFilters.value.search.toLowerCase()) ||
         d.ocr_text.toLowerCase().includes(activeFilters.value.search.toLowerCase())
       )
     }
-    
+
     return docs
   })
 
