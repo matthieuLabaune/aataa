@@ -4,9 +4,9 @@ export default defineNuxtConfig({
     devtools: { enabled: false },
     ssr: false,
     css: [
-        '~/assets/css/tokens.css',
-        '~/assets/css/material.css',
-        '~/public/main.css'
+        '@/assets/css/tokens.css',
+        '@/assets/css/material.css',
+        '@/public/main.css'
     ],
     app: {
         baseURL: './',

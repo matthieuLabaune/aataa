@@ -28,18 +28,6 @@
       </p>
     </div>
 
-    <style>
-      @keyframes slideInRight {
-        from {
-          opacity: 0;
-          transform: translateX(100px);
-        }
-        to {
-          opacity: 1;
-          transform: translateX(0);
-        }
-      }
-    </style>
     <div class="container" style="padding-top: 2rem; padding-bottom: 2rem">
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
@@ -1066,3 +1054,16 @@ async function selectArchivePath() {
   }
 }
 </script>
+
+<style scoped>
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+</style>
