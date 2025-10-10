@@ -10,8 +10,8 @@ impl OcrEngine {
     }
 
     pub fn extract_text_from_image(&mut self, image_path: &Path) -> Result<String, Box<dyn std::error::Error>> {
-        // Perform OCR using tesseract crate
-        let text = Tesseract::new(None, Some("eng"))?
+        // Perform OCR using tesseract crate with multilingual support (French + English + Spanish)
+        let text = Tesseract::new(None, Some("fra+eng+spa"))?
             .set_image(image_path.to_str().ok_or("Invalid path")?)?
             .get_text()?;
 

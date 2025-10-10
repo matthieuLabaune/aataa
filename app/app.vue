@@ -1,48 +1,59 @@
 <template>
-  <div style="min-height: 100vh; background: #f3f4f6">
+  <div style="min-height: 100vh;">
     <!-- Message de statut flottant -->
     <div
       v-if="showStatus"
-      style="position: fixed; top: 20px; right: 20px; z-index: 100; background: white; padding: 1rem 1.5rem; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px"
+      style="position: fixed; top: 20px; right: 20px; z-index: 100; background: white; padding: 1rem 1.5rem; border-radius: 0.75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.15); max-width: 400px; border: 1px solid #e5e7eb; animation: slideInRight 0.3s ease;"
     >
-      <p style="margin: 0; white-space: pre-line">{{ statusMessage }}</p>
+      <p style="margin: 0; white-space: pre-line; font-weight: 500">{{ statusMessage }}</p>
     </div>
 
     <!-- Barre de progression multi-fichiers -->
     <div
       v-if="processingMultiple"
-      style="position: fixed; bottom: 20px; right: 20px; z-index: 100; background: white; padding: 1rem 1.5rem; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); min-width: 300px"
+      style="position: fixed; bottom: 20px; right: 20px; z-index: 100; background: white; padding: 1.25rem 1.5rem; border-radius: 0.75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.15); min-width: 320px; border: 1px solid #e5e7eb; animation: slideInRight 0.3s ease;"
     >
-      <p style="margin: 0 0 0.5rem 0; font-weight: 600">
-        Traitement en cours...
+      <p style="margin: 0 0 0.75rem 0; font-weight: 700; color: #1f2937; font-size: 0.95rem">
+        ⏳ Traitement en cours...
       </p>
-      <div style="background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 0.5rem">
+      <div style="background: linear-gradient(135deg, #e5e7eb 0%, #f3f4f6 100%); height: 10px; border-radius: 9999px; overflow: hidden; margin-bottom: 0.75rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.06)">
         <div
-          style="background: #3b82f6; height: 100%; transition: width 0.3s"
+          style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); height: 100%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);"
           :style="{ width: `${(processedFiles + failedFiles) / totalFiles * 100}%` }"
         ></div>
       </div>
-      <p style="margin: 0; font-size: 0.875rem; color: #6b7280">
+      <p style="margin: 0; font-size: 0.875rem; color: #6b7280; font-weight: 600">
         {{ processedFiles + failedFiles }} / {{ totalFiles }} fichiers
-        <span v-if="failedFiles > 0" style="color: #ef4444">• {{ failedFiles }} échoué(s)</span>
+        <span v-if="failedFiles > 0" style="color: #ef4444; font-weight: 700">• {{ failedFiles }} échoué(s)</span>
       </p>
     </div>
 
+    <style>
+      @keyframes slideInRight {
+        from {
+          opacity: 0;
+          transform: translateX(100px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+    </style>
     <div class="container" style="padding-top: 2rem; padding-bottom: 2rem">
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
         <div>
-          <h1 style="font-size: 1.875rem; font-weight: bold; margin: 0">
-            AATAA - An App To Archive All
+          <h1 style="font-size: 2rem; font-weight: 800; margin: 0; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+            📚 AATAA
           </h1>
-          <p class="text-gray-500" style="margin-top: 0.25rem">
-            Archivage automatique de documents avec OCR
+          <p class="text-gray-500" style="margin-top: 0.25rem; font-weight: 500">
+            An App To Archive All - Archivage intelligent avec OCR multilingue
           </p>
         </div>
         <button
-          class="btn btn-secondary"
+          class="btn btn-secondary icon-btn"
           @click="showSettings = true"
-          style="padding: 0.5rem; width: 40px; height: 40px; font-size: 1.25rem"
           title="Paramètres"
         >
           ⚙️
