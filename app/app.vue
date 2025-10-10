@@ -70,6 +70,12 @@
           </p>
         </div>
 
+        <div style="margin-top: 1rem; text-align: center">
+          <button class="btn btn-secondary" @click="selectFolder" style="font-size: 0.875rem">
+            📁 Ou sélectionner un dossier entier
+          </button>
+        </div>
+
         <div v-if="processing" style="text-align: center; margin-top: 1rem">
           <div style="font-size: 1.5rem; margin-bottom: 0.5rem">⏳</div>
           <p class="text-gray-600">
@@ -404,6 +410,47 @@ async function selectFile() {
   } catch (error) {
     console.error('Error selecting file:', error)
     showMessage('❌ Erreur sélection: ' + error, 5000)
+  }
+}
+
+async function selectFolder() {
+  console.log('selectFolder called!')
+
+  try {
+    const selected = await openDialog({
+      directory: true,
+      multiple: false
+    })
+
+    console.log('Folder selected:', selected)
+
+    if (!selected || typeof selected !== 'string') {
+      console.log('No folder selected')
+      return
+    }
+
+    // Scan folder for supported files
+    showMessage('🔍 Scan du dossier...', 5000)
+    const files = await invoke<string[]>('scan_folder', { folderPath: selected })
+
+    console.log(`Found ${files.length} files in folder`)
+
+    if (files.length === 0) {
+      showMessage('⚠️ Aucun fichier supporté trouvé dans ce dossier', 5000)
+      return
+    }
+
+    if (files.length > 100) {
+      showMessage(`❌ Trop de fichiers (${files.length}). Maximum 100 fichiers à la fois`, 5000)
+      return
+    }
+
+    // Process all files
+    await processMultipleFiles(files)
+
+  } catch (error) {
+    console.error('Error selecting folder:', error)
+    showMessage('❌ Erreur sélection dossier: ' + error, 5000)
   }
 }
 

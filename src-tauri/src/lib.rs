@@ -61,6 +61,7 @@ pub fn run() {
       commands::open_file,
       commands::set_archive_path,
       commands::get_archive_path,
+      commands::scan_folder,
       commands::write_temp_file,
     ])
     .run(tauri::generate_context!())

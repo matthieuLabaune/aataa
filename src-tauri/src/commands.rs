@@ -7,12 +7,30 @@ use crate::ocr::OcrEngine;
 use crate::classifier::Classifier;
 use uuid::Uuid;
 use chrono::Local;
+use regex::Regex;
 
 pub struct AppState {
     pub db: Mutex<Database>,
     pub ocr: Mutex<OcrEngine>,
     pub classifier: Classifier,
     pub archive_path: Mutex<PathBuf>,
+}
+
+/// Extract year from filename (looking for 4-digit year patterns like 2023, 2024, etc.)
+fn extract_year_from_filename(filename: &str) -> Option<String> {
+    let re = Regex::new(r"(20\d{2})").ok()?;
+    re.captures(filename)
+        .and_then(|caps| caps.get(1))
+        .map(|m| m.as_str().to_string())
+}
+
+/// Extract year from OCR text (looking for dates in format DD/MM/YYYY or DD-MM-YYYY)
+fn extract_year_from_text(text: &str) -> Option<String> {
+    // Look for date patterns like 14/06/2023 or 14-06-2023
+    let re = Regex::new(r"\d{1,2}[/-]\d{1,2}[/-](20\d{2})").ok()?;
+    re.captures(text)
+        .and_then(|caps| caps.get(1))
+        .map(|m| m.as_str().to_string())
 }
 
 #[command]
@@ -48,11 +66,16 @@ pub async fn process_file(
     let tags = state.classifier.extract_tags(&ocr_text);
     let new_name = state.classifier.generate_filename(&doc_type, &original_name);
 
-    // Copy file to archive with folder organization
+    // Extract year from filename or use current year
+    let year = extract_year_from_filename(&original_name)
+        .or_else(|| extract_year_from_text(&ocr_text))
+        .unwrap_or_else(|| Local::now().format("%Y").to_string());
+
+    // Copy file to archive with folder organization: TYPE/YEAR/
     let archive_path = state.archive_path.lock().map_err(|e| e.to_string())?;
     
-    // Create subfolder for document type
-    let type_folder = archive_path.join(&doc_type.name);
+    // Create subfolder structure: DocumentType/Year/
+    let type_folder = archive_path.join(&doc_type.name).join(&year);
     std::fs::create_dir_all(&type_folder).map_err(|e| e.to_string())?;
     
     let new_path = type_folder.join(&new_name);
@@ -148,12 +171,50 @@ pub async fn set_archive_path(
     Ok(())
 }
 
+
 #[command]
 pub async fn get_archive_path(
     state: tauri::State<'_, AppState>,
 ) -> Result<String, String> {
     let archive_path = state.archive_path.lock().map_err(|e| e.to_string())?;
     Ok(archive_path.to_str().unwrap_or("").to_string())
+}
+
+#[command]
+pub async fn scan_folder(folder_path: String) -> Result<Vec<String>, String> {
+    use std::fs;
+    use std::path::Path;
+
+    let path = Path::new(&folder_path);
+    if !path.exists() || !path.is_dir() {
+        return Err("Invalid folder path".to_string());
+    }
+
+    let mut files = Vec::new();
+    let supported_extensions = vec!["pdf", "png", "jpg", "jpeg"];
+
+    fn scan_directory(dir: &Path, files: &mut Vec<String>, supported_ext: &Vec<&str>) -> Result<(), String> {
+        for entry in fs::read_dir(dir).map_err(|e| e.to_string())? {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let path = entry.path();
+
+            if path.is_file() {
+                if let Some(ext) = path.extension() {
+                    if supported_ext.contains(&ext.to_str().unwrap_or("").to_lowercase().as_str()) {
+                        files.push(path.to_str().unwrap_or("").to_string());
+                    }
+                }
+            } else if path.is_dir() {
+                // Scan subdirectories recursively
+                scan_directory(&path, files, supported_ext)?;
+            }
+        }
+        Ok(())
+    }
+
+    scan_directory(path, &mut files, &supported_extensions)?;
+
+    Ok(files)
 }
 
 #[command]
@@ -166,3 +227,4 @@ pub async fn write_temp_file(path: String, content: Vec<u8>) -> Result<(), Strin
 
     Ok(())
 }
+
