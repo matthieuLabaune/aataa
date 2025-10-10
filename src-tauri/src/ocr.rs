@@ -43,3 +43,66 @@ impl OcrEngine {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
+    #[test]
+    fn test_ocr_engine_creation() {
+        let engine = OcrEngine::new();
+        assert!(engine.is_ok(), "OcrEngine should be created successfully");
+    }
+
+    #[test]
+    fn test_extract_text_from_pdf_empty() {
+        // Create a minimal PDF structure (simplified for testing)
+        let mut temp_file = NamedTempFile::new().unwrap();
+        
+        // Write minimal PDF header and trailer (this will be recognized as PDF but have no text)
+        temp_file.write_all(b"%PDF-1.4\n").unwrap();
+        temp_file.write_all(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n").unwrap();
+        temp_file.write_all(b"2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n").unwrap();
+        temp_file.write_all(b"xref\n0 3\n0000000000 65535 f\n").unwrap();
+        temp_file.write_all(b"0000000009 00000 n\n").unwrap();
+        temp_file.write_all(b"0000000058 00000 n\n").unwrap();
+        temp_file.write_all(b"trailer\n<< /Size 3 /Root 1 0 R >>\n").unwrap();
+        temp_file.write_all(b"startxref\n109\n%%EOF\n").unwrap();
+        temp_file.flush().unwrap();
+
+        let mut engine = OcrEngine::new().unwrap();
+        let result = engine.extract_text_from_pdf(temp_file.path());
+
+        assert!(result.is_ok(), "PDF extraction should not fail");
+        
+        // Empty PDF should return the scanned document message
+        let text = result.unwrap();
+        assert!(
+            text.contains("Document scanné") || text.trim().is_empty(),
+            "Empty PDF should return placeholder or empty text"
+        );
+    }
+
+    #[test]
+    fn test_extract_text_from_invalid_path() {
+        let mut engine = OcrEngine::new().unwrap();
+        let result = engine.extract_text_from_pdf(Path::new("/nonexistent/file.pdf"));
+
+        assert!(result.is_err(), "Should fail for nonexistent file");
+    }
+
+    // Note: Image OCR tests require tesseract to be installed and configured
+    // These are integration tests that would need actual image files
+    // For unit tests, we verify the error handling paths
+    
+    #[test]
+    fn test_extract_text_from_invalid_image() {
+        let mut engine = OcrEngine::new().unwrap();
+        let result = engine.extract_text_from_image(Path::new("/nonexistent/image.png"));
+
+        assert!(result.is_err(), "Should fail for nonexistent image file");
+    }
+}
+

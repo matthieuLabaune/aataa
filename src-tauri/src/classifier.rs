@@ -105,3 +105,135 @@ impl Classifier {
         format!("{}_{}.{}", doc_type.prefix, date_str, extension)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_classify_facture() {
+        let classifier = Classifier::new();
+        let text = "Facture n°12345 - Montant total: 150.00€";
+        let result = classifier.classify(text);
+        assert_eq!(result.name, "Facture");
+        assert_eq!(result.prefix, "FACT");
+    }
+
+    #[test]
+    fn test_classify_contrat() {
+        let classifier = Classifier::new();
+        let text = "Contrat de location - Signé le 01/01/2024";
+        let result = classifier.classify(text);
+        assert_eq!(result.name, "Contrat");
+        assert_eq!(result.prefix, "CONT");
+    }
+
+    #[test]
+    fn test_classify_releve_bancaire() {
+        let classifier = Classifier::new();
+        let text = "Relevé de compte - IBAN: FR76 1234 5678 9012";
+        let result = classifier.classify(text);
+        assert_eq!(result.name, "Relevé bancaire");
+        assert_eq!(result.prefix, "BANK");
+    }
+
+    #[test]
+    fn test_classify_bulletin_paie() {
+        let classifier = Classifier::new();
+        let text = "BULLETIN DE PAIE - Période: Janvier 2024 - Salaire net: 2500.00";
+        let result = classifier.classify(text);
+        assert_eq!(result.name, "Bulletin de paie");
+        assert_eq!(result.prefix, "PAIE");
+    }
+
+    #[test]
+    fn test_classify_unknown() {
+        let classifier = Classifier::new();
+        let text = "Ceci est un document sans mots-clés spécifiques";
+        let result = classifier.classify(text);
+        assert_eq!(result.name, "Unknown");
+        assert_eq!(result.prefix, "DOC");
+    }
+
+    #[test]
+    fn test_extract_tags_date() {
+        let classifier = Classifier::new();
+        let text = "Document créé le 15/03/2024";
+        let tags = classifier.extract_tags(text);
+        assert!(tags.contains(&"contains_date".to_string()));
+    }
+
+    #[test]
+    fn test_extract_tags_amount() {
+        let classifier = Classifier::new();
+        let text = "Montant: 150.00€";
+        let tags = classifier.extract_tags(text);
+        assert!(tags.contains(&"contains_amount".to_string()));
+    }
+
+    #[test]
+    fn test_extract_tags_email() {
+        let classifier = Classifier::new();
+        let text = "Contact: info@example.com";
+        let tags = classifier.extract_tags(text);
+        assert!(tags.contains(&"contains_email".to_string()));
+    }
+
+    #[test]
+    fn test_extract_tags_phone() {
+        let classifier = Classifier::new();
+        let text = "Téléphone: 01 23 45 67 89";
+        let tags = classifier.extract_tags(text);
+        assert!(tags.contains(&"contains_phone".to_string()));
+    }
+
+    #[test]
+    fn test_extract_tags_company() {
+        let classifier = Classifier::new();
+        let text = "ACME S.A.S - Document officiel";
+        let tags = classifier.extract_tags(text);
+        assert!(tags.contains(&"company_document".to_string()));
+    }
+
+    #[test]
+    fn test_extract_tags_multiple() {
+        let classifier = Classifier::new();
+        let text = "Facture ACME S.A.S - Date: 15/03/2024 - Montant: 150.00€ - Contact: info@acme.com";
+        let tags = classifier.extract_tags(text);
+        assert!(tags.contains(&"contains_date".to_string()));
+        assert!(tags.contains(&"contains_amount".to_string()));
+        assert!(tags.contains(&"contains_email".to_string()));
+        assert!(tags.contains(&"company_document".to_string()));
+    }
+
+    #[test]
+    fn test_generate_filename() {
+        let classifier = Classifier::new();
+        let doc_type = DocumentType {
+            name: "Facture".to_string(),
+            pattern: "".to_string(),
+            prefix: "FACT".to_string(),
+        };
+        let original_name = "document.pdf";
+        let filename = classifier.generate_filename(&doc_type, original_name);
+        
+        assert!(filename.starts_with("FACT_"));
+        assert!(filename.ends_with(".pdf"));
+        assert!(filename.len() > 10); // FACT_ + date + .pdf
+    }
+
+    #[test]
+    fn test_generate_filename_no_extension() {
+        let classifier = Classifier::new();
+        let doc_type = DocumentType {
+            name: "Test".to_string(),
+            pattern: "".to_string(),
+            prefix: "TEST".to_string(),
+        };
+        let original_name = "document_without_extension";
+        let filename = classifier.generate_filename(&doc_type, original_name);
+        
+        assert!(filename.starts_with("TEST_"));
+        assert!(filename.ends_with(".txt")); // Default extension
+    }
+}

@@ -4,6 +4,9 @@ mod ocr;
 mod classifier;
 mod commands;
 
+#[cfg(test)]
+mod database_tests;
+
 use std::sync::Mutex;
 use commands::AppState;
 use database::Database;

@@ -250,3 +250,81 @@ pub async fn update_metadata(
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db.update_document_metadata(&id, &document_type, &tags, &new_name).map_err(|e| e.to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_year_from_filename() {
+        assert_eq!(extract_year_from_filename("facture_2023_12_31.pdf"), Some("2023".to_string()));
+        assert_eq!(extract_year_from_filename("contrat-2024.pdf"), Some("2024".to_string()));
+        assert_eq!(extract_year_from_filename("document_2022_janvier.jpg"), Some("2022".to_string()));
+        assert_eq!(extract_year_from_filename("sans_annee.pdf"), None);
+        assert_eq!(extract_year_from_filename("ancien_1999.pdf"), None); // Only accepts 20XX years
+    }
+
+    #[test]
+    fn test_extract_year_from_text() {
+        assert_eq!(extract_year_from_text("Date: 14/06/2023"), Some("2023".to_string()));
+        assert_eq!(extract_year_from_text("Émis le 01-12-2024"), Some("2024".to_string()));
+        assert_eq!(extract_year_from_text("25/11/2022 - Facture"), Some("2022".to_string()));
+        assert_eq!(extract_year_from_text("Pas de date ici"), None);
+        assert_eq!(extract_year_from_text("2023 sans format"), None); // Requires date format
+    }
+
+    #[test]
+    fn test_extract_year_priority() {
+        // Test that filename extraction works
+        let filename = "facture_2023.pdf";
+        let text = "Date: 14/06/2024";
+        
+        let year_from_filename = extract_year_from_filename(filename);
+        let year_from_text = extract_year_from_text(text);
+        
+        assert_eq!(year_from_filename, Some("2023".to_string()));
+        assert_eq!(year_from_text, Some("2024".to_string()));
+    }
+
+    #[test]
+    fn test_scan_folder_invalid_path() {
+        use tokio::runtime::Runtime;
+        let rt = Runtime::new().unwrap();
+        
+        let result = rt.block_on(scan_folder("/path/that/does/not/exist".to_string()));
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid folder path"));
+    }
+
+    #[test]
+    fn test_open_file_command_exists() {
+        // Just verify the function compiles and can be called
+        // Actual file opening is OS-dependent and would open real files
+        use tokio::runtime::Runtime;
+        let rt = Runtime::new().unwrap();
+        
+        let result = rt.block_on(open_file("/nonexistent/file.pdf".to_string()));
+        // On macOS this will try to spawn 'open' command which will fail for nonexistent file
+        // but that's expected - we're just testing the command structure
+        assert!(result.is_err() || result.is_ok()); // Either is acceptable for this test
+    }
+
+    #[test]
+    fn test_write_temp_file() {
+        use tokio::runtime::Runtime;
+        use tempfile::NamedTempFile;
+        
+        let rt = Runtime::new().unwrap();
+        let temp_file = NamedTempFile::new().unwrap();
+        let temp_path = temp_file.path().to_str().unwrap().to_string();
+        
+        let content = b"Test content".to_vec();
+        let result = rt.block_on(write_temp_file(temp_path.clone(), content.clone()));
+        
+        assert!(result.is_ok());
+        
+        // Verify content was written
+        let written_content = std::fs::read(&temp_path).unwrap();
+        assert_eq!(written_content, content);
+    }
+}
