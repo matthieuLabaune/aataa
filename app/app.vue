@@ -54,6 +54,9 @@
           Importer un document
         </h2>
 
+        <!-- OCR Type Selector -->
+        <OcrTypeSelector v-model="selectedOcrType" style="margin-bottom: 1.5rem" />
+
         <div
           class="upload-area"
           @click="selectFile"
@@ -78,7 +81,7 @@
         <div v-if="processing" style="text-align: center; margin-top: 1rem">
           <div style="font-size: 1.5rem; margin-bottom: 0.5rem">⏳</div>
           <p class="text-gray-600">
-            Traitement en cours... (OCR + Classification)
+            {{ processingMessage }}
           </p>
         </div>
       </div>
@@ -502,6 +505,10 @@ const showPreview = ref(false)
 const filterType = ref<string>('all')
 const filterTag = ref<string>('all')
 
+// ML OCR state
+const selectedOcrType = ref<'standard' | 'handwritten' | 'printed-ml' | 'caption'>('standard')
+const processingMessage = ref('Traitement en cours... (OCR + Classification)')
+
 // Multi-file processing state
 const processingMultiple = ref(false)
 const totalFiles = ref(0)
@@ -529,6 +536,41 @@ function showMessage(msg: string, duration = 3000) {
   setTimeout(() => {
     showStatus.value = false
   }, duration)
+}
+
+// Fonction pour exécuter l'OCR ML selon le type sélectionné
+async function runMlOcr(filePath: string): Promise<string | null> {
+  try {
+    if (selectedOcrType.value === 'handwritten') {
+      processingMessage.value = '🖊️ Extraction du texte manuscrit avec TrOCR...'
+      const text = await invoke<string>('extract_handwritten_text', {
+        imagePath: filePath,
+        ocrType: 'handwritten'
+      })
+      return text
+    } else if (selectedOcrType.value === 'printed-ml') {
+      processingMessage.value = '📰 Extraction du texte imprimé avec TrOCR ML...'
+      const text = await invoke<string>('extract_handwritten_text', {
+        imagePath: filePath,
+        ocrType: 'printed'
+      })
+      return text
+    } else if (selectedOcrType.value === 'caption') {
+      processingMessage.value = '🎨 Génération de la description avec BLIP...'
+      const caption = await invoke<string>('generate_image_caption', {
+        imagePath: filePath,
+        language: 'fr'
+      })
+      return caption
+    }
+    // Type 'standard' utilise Tesseract par défaut (pas d'appel ML)
+    processingMessage.value = 'Traitement avec Tesseract OCR...'
+    return null
+  } catch (error) {
+    console.error('Erreur ML OCR:', error)
+    showMessage(`⚠️ Erreur ML OCR (retour à Tesseract): ${error}`, 5000)
+    return null
+  }
 }
 
 async function loadDocuments() {

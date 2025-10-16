@@ -1,13 +1,15 @@
-use tauri::command;
-use std::sync::Mutex;
-use std::path::PathBuf;
-use crate::models::Document;
-use crate::database::Database;
-use crate::ocr::OcrEngine;
 use crate::classifier::Classifier;
-use uuid::Uuid;
+use crate::database::Database;
+use crate::models::Document;
+use crate::ocr::OcrEngine;
 use chrono::Local;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use std::process::Command;
+use std::sync::Mutex;
+use tauri::command;
+use uuid::Uuid;
 
 pub struct AppState {
     pub db: Mutex<Database>,
@@ -56,15 +58,19 @@ pub async fn process_file(
     // Perform OCR
     let mut ocr = state.ocr.lock().map_err(|e| e.to_string())?;
     let ocr_text = if path.extension().and_then(|s| s.to_str()) == Some("pdf") {
-        ocr.extract_text_from_pdf(&path).map_err(|e| e.to_string())?
+        ocr.extract_text_from_pdf(&path)
+            .map_err(|e| e.to_string())?
     } else {
-        ocr.extract_text_from_image(&path).map_err(|e| e.to_string())?
+        ocr.extract_text_from_image(&path)
+            .map_err(|e| e.to_string())?
     };
 
     // Classify document
     let doc_type = state.classifier.classify(&ocr_text);
     let tags = state.classifier.extract_tags(&ocr_text);
-    let new_name = state.classifier.generate_filename(&doc_type, &original_name);
+    let new_name = state
+        .classifier
+        .generate_filename(&doc_type, &original_name);
 
     // Extract year from filename or use current year
     let year = extract_year_from_filename(&original_name)
@@ -104,9 +110,7 @@ pub async fn process_file(
 }
 
 #[command]
-pub async fn get_documents(
-    state: tauri::State<'_, AppState>,
-) -> Result<Vec<Document>, String> {
+pub async fn get_documents(state: tauri::State<'_, AppState>) -> Result<Vec<Document>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db.get_all_documents().map_err(|e| e.to_string())
 }
@@ -121,10 +125,7 @@ pub async fn search_documents(
 }
 
 #[command]
-pub async fn delete_document(
-    id: String,
-    state: tauri::State<'_, AppState>,
-) -> Result<(), String> {
+pub async fn delete_document(id: String, state: tauri::State<'_, AppState>) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db.delete_document(&id).map_err(|e| e.to_string())
 }
@@ -172,11 +173,8 @@ pub async fn set_archive_path(
     Ok(())
 }
 
-
 #[command]
-pub async fn get_archive_path(
-    state: tauri::State<'_, AppState>,
-) -> Result<String, String> {
+pub async fn get_archive_path(state: tauri::State<'_, AppState>) -> Result<String, String> {
     let archive_path = state.archive_path.lock().map_err(|e| e.to_string())?;
     Ok(archive_path.to_str().unwrap_or("").to_string())
 }
@@ -194,7 +192,11 @@ pub async fn scan_folder(folder_path: String) -> Result<Vec<String>, String> {
     let mut files = Vec::new();
     let supported_extensions = vec!["pdf", "png", "jpg", "jpeg"];
 
-    fn scan_directory(dir: &Path, files: &mut Vec<String>, supported_ext: &Vec<&str>) -> Result<(), String> {
+    fn scan_directory(
+        dir: &Path,
+        files: &mut Vec<String>,
+        supported_ext: &Vec<&str>,
+    ) -> Result<(), String> {
         for entry in fs::read_dir(dir).map_err(|e| e.to_string())? {
             let entry = entry.map_err(|e| e.to_string())?;
             let path = entry.path();
@@ -236,7 +238,8 @@ pub async fn update_notes(
     state: tauri::State<'_, AppState>,
 ) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    db.update_document_notes(&id, notes).map_err(|e| e.to_string())
+    db.update_document_notes(&id, notes)
+        .map_err(|e| e.to_string())
 }
 
 #[command]
@@ -248,7 +251,8 @@ pub async fn update_metadata(
     state: tauri::State<'_, AppState>,
 ) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    db.update_document_metadata(&id, &document_type, &tags, &new_name).map_err(|e| e.to_string())
+    db.update_document_metadata(&id, &document_type, &tags, &new_name)
+        .map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
@@ -257,18 +261,36 @@ mod tests {
 
     #[test]
     fn test_extract_year_from_filename() {
-        assert_eq!(extract_year_from_filename("facture_2023_12_31.pdf"), Some("2023".to_string()));
-        assert_eq!(extract_year_from_filename("contrat-2024.pdf"), Some("2024".to_string()));
-        assert_eq!(extract_year_from_filename("document_2022_janvier.jpg"), Some("2022".to_string()));
+        assert_eq!(
+            extract_year_from_filename("facture_2023_12_31.pdf"),
+            Some("2023".to_string())
+        );
+        assert_eq!(
+            extract_year_from_filename("contrat-2024.pdf"),
+            Some("2024".to_string())
+        );
+        assert_eq!(
+            extract_year_from_filename("document_2022_janvier.jpg"),
+            Some("2022".to_string())
+        );
         assert_eq!(extract_year_from_filename("sans_annee.pdf"), None);
         assert_eq!(extract_year_from_filename("ancien_1999.pdf"), None); // Only accepts 20XX years
     }
 
     #[test]
     fn test_extract_year_from_text() {
-        assert_eq!(extract_year_from_text("Date: 14/06/2023"), Some("2023".to_string()));
-        assert_eq!(extract_year_from_text("Émis le 01-12-2024"), Some("2024".to_string()));
-        assert_eq!(extract_year_from_text("25/11/2022 - Facture"), Some("2022".to_string()));
+        assert_eq!(
+            extract_year_from_text("Date: 14/06/2023"),
+            Some("2023".to_string())
+        );
+        assert_eq!(
+            extract_year_from_text("Émis le 01-12-2024"),
+            Some("2024".to_string())
+        );
+        assert_eq!(
+            extract_year_from_text("25/11/2022 - Facture"),
+            Some("2022".to_string())
+        );
         assert_eq!(extract_year_from_text("Pas de date ici"), None);
         assert_eq!(extract_year_from_text("2023 sans format"), None); // Requires date format
     }
@@ -311,8 +333,8 @@ mod tests {
 
     #[test]
     fn test_write_temp_file() {
-        use tokio::runtime::Runtime;
         use tempfile::NamedTempFile;
+        use tokio::runtime::Runtime;
 
         let rt = Runtime::new().unwrap();
         let temp_file = NamedTempFile::new().unwrap();
@@ -326,5 +348,148 @@ mod tests {
         // Verify content was written
         let written_content = std::fs::read(&temp_path).unwrap();
         assert_eq!(written_content, content);
+    }
+}
+
+// ============================================================================
+// ML OCR - TrOCR et BLIP via Python subprocess
+// ============================================================================
+
+#[derive(Debug, Serialize, Deserialize)]
+struct TrOCRResponse {
+    success: bool,
+    text: Option<String>,
+    error: Option<String>,
+    model: Option<String>,
+    device: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct BLIPResponse {
+    success: bool,
+    caption: Option<String>,
+    error: Option<String>,
+    language: Option<String>,
+    model: Option<String>,
+    device: Option<String>,
+}
+
+/// Extrait le texte manuscrit d'une image avec TrOCR
+#[command]
+pub async fn extract_handwritten_text(
+    image_path: String,
+    ocr_type: String, // "handwritten" ou "printed"
+) -> Result<String, String> {
+    log::info!(
+        "🖊️ Extraction OCR avec TrOCR: {} (type: {})",
+        image_path,
+        ocr_type
+    );
+
+    // Vérifier que l'image existe
+    let path = PathBuf::from(&image_path);
+    if !path.exists() {
+        return Err("L'image n'existe pas".to_string());
+    }
+
+    // Trouver le chemin du script Python
+    let python_script = std::env::current_dir()
+        .map_err(|e| e.to_string())?
+        .join("python")
+        .join("trocr_handwritten.py");
+
+    if !python_script.exists() {
+        return Err(format!("Script Python introuvable: {:?}", python_script));
+    }
+
+    log::info!("📝 Appel du script Python: {:?}", python_script);
+
+    // Exécuter le script Python
+    let output = Command::new("python3")
+        .arg(python_script)
+        .arg(&image_path)
+        .arg(&ocr_type)
+        .output()
+        .map_err(|e| format!("Erreur d'exécution Python: {}", e))?;
+
+    // Logs stderr pour le débogage
+    if !output.stderr.is_empty() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::debug!("Python stderr: {}", stderr);
+    }
+
+    // Parser la sortie JSON
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    log::debug!("Python stdout: {}", stdout);
+
+    let response: TrOCRResponse =
+        serde_json::from_str(&stdout).map_err(|e| format!("Erreur de parsing JSON: {}", e))?;
+
+    if response.success {
+        Ok(response.text.unwrap_or_default())
+    } else {
+        Err(response
+            .error
+            .unwrap_or_else(|| "Erreur inconnue".to_string()))
+    }
+}
+
+/// Génère une description automatique pour une image avec BLIP
+#[command]
+pub async fn generate_image_caption(
+    image_path: String,
+    language: String, // "en" ou "fr"
+) -> Result<String, String> {
+    log::info!(
+        "🎨 Génération de description BLIP: {} (langue: {})",
+        image_path,
+        language
+    );
+
+    // Vérifier que l'image existe
+    let path = PathBuf::from(&image_path);
+    if !path.exists() {
+        return Err("L'image n'existe pas".to_string());
+    }
+
+    // Trouver le chemin du script Python
+    let python_script = std::env::current_dir()
+        .map_err(|e| e.to_string())?
+        .join("python")
+        .join("blip_caption.py");
+
+    if !python_script.exists() {
+        return Err(format!("Script Python introuvable: {:?}", python_script));
+    }
+
+    log::info!("📝 Appel du script Python: {:?}", python_script);
+
+    // Exécuter le script Python
+    let output = Command::new("python3")
+        .arg(python_script)
+        .arg(&image_path)
+        .arg(&language)
+        .output()
+        .map_err(|e| format!("Erreur d'exécution Python: {}", e))?;
+
+    // Logs stderr pour le débogage
+    if !output.stderr.is_empty() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::debug!("Python stderr: {}", stderr);
+    }
+
+    // Parser la sortie JSON
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    log::debug!("Python stdout: {}", stdout);
+
+    let response: BLIPResponse =
+        serde_json::from_str(&stdout).map_err(|e| format!("Erreur de parsing JSON: {}", e))?;
+
+    if response.success {
+        Ok(response.caption.unwrap_or_default())
+    } else {
+        Err(response
+            .error
+            .unwrap_or_else(|| "Erreur inconnue".to_string()))
     }
 }

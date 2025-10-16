@@ -68,6 +68,9 @@ pub fn run() {
       commands::write_temp_file,
       commands::update_notes,
       commands::update_metadata,
+      // ML OCR via Python
+      commands::extract_handwritten_text,
+      commands::generate_image_caption,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
