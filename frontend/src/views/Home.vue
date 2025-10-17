@@ -139,8 +139,17 @@
             :style="{ animationDelay: `${200 + index * 50}ms` }"
             @click="selectedDocument = doc"
           >
+            <!-- Category Badge (top-left corner) -->
+            <div class="category-badge" :style="{ backgroundColor: getCategoryColor(doc.category) }">
+              <span class="material-icons category-icon">{{ getCategoryIcon(doc.category) }}</span>
+              <span class="body-small">{{ doc.category }}</span>
+            </div>
+
             <div class="card-header">
-              <span class="doc-type-chip md-chip">{{ doc.document_type }}</span>
+              <div class="doc-type-info">
+                <span class="doc-type-chip md-chip">{{ doc.document_type }}</span>
+                <span v-if="doc.subcategory" class="subcategory-text body-small">{{ doc.subcategory }}</span>
+              </div>
               <button @click.stop="deleteDocument(doc.id)" class="md-icon-button">
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor">
                   <polyline points="3 4 5 4 17 4" stroke-width="2" stroke-linecap="round"/>
@@ -202,6 +211,19 @@
 
         <div class="md-modal-content">
           <div class="modal-info-grid">
+            <div class="info-item">
+              <span class="label-large info-label">Catégorie</span>
+              <span class="body-large">
+                <span class="material-icons" style="font-size: 18px; vertical-align: middle;">
+                  {{ getCategoryIcon(selectedDocument.category) }}
+                </span>
+                {{ selectedDocument.category }}
+              </span>
+            </div>
+            <div v-if="selectedDocument.subcategory" class="info-item">
+              <span class="label-large info-label">Sous-catégorie</span>
+              <span class="body-large">{{ selectedDocument.subcategory }}</span>
+            </div>
             <div class="info-item">
               <span class="label-large info-label">Type</span>
               <span class="body-large">{{ selectedDocument.document_type }}</span>
@@ -577,6 +599,36 @@ function formatSize(bytes: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + ' Mo'
 }
 
+// Get category icon (Material Icons name)
+function getCategoryIcon(category: string): string {
+  const icons: Record<string, string> = {
+    'Administratif': 'description',
+    'Financier': 'account_balance',
+    'Santé': 'medical_services',
+    'Professionnel': 'work',
+    'Immobilier': 'home',
+    'Académique': 'school',
+    'Personnel': 'person',
+    'Autre': 'folder'
+  }
+  return icons[category] || 'folder'
+}
+
+// Get category color
+function getCategoryColor(category: string): string {
+  const colors: Record<string, string> = {
+    'Administratif': '#757575',  // Gray
+    'Financier': '#000000',      // Black
+    'Santé': '#D32F2F',          // Red
+    'Professionnel': '#424242',  // Dark gray
+    'Immobilier': '#616161',     // Medium gray
+    'Académique': '#212121',     // Almost black
+    'Personnel': '#9E9E9E',      // Light gray
+    'Autre': '#BDBDBD'           // Very light gray
+  }
+  return colors[category] || '#BDBDBD'
+}
+
 onMounted(() => {
   loadDocuments()
 
@@ -813,16 +865,54 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--md-sys-spacing-md);
+  position: relative;
+  overflow: visible;
+}
+
+/* Category Badge */
+.category-badge {
+  position: absolute;
+  top: -8px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background-color: #000000;
+  color: white;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 11px;
+  z-index: 10;
+  box-shadow: var(--md-sys-elevation-level2);
+}
+
+.category-icon {
+  font-size: 14px;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  padding-top: 8px;
+}
+
+.doc-type-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
 }
 
 .doc-type-chip {
   font-size: var(--md-sys-typescale-label-small-font-size);
+  width: fit-content;
+}
+
+.subcategory-text {
+  color: var(--md-sys-color-on-surface-variant);
+  font-style: italic;
 }
 
 .doc-name {

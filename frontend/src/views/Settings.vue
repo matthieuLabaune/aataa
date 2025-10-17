@@ -98,8 +98,28 @@
         </div>
       </section>
 
-      <!-- App Information Section -->
+      <!-- Categories & Tags Section -->
       <section class="settings-section md-card animate-slide-in-up" style="animation-delay: 100ms">
+        <div class="section-header">
+          <div class="section-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor">
+              <path d="M4 8h24M4 16h24M4 24h24" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="8" cy="8" r="2" fill="currentColor"/>
+              <circle cx="8" cy="16" r="2" fill="currentColor"/>
+              <circle cx="8" cy="24" r="2" fill="currentColor"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="title-large">Catégories et sous-catégories</h2>
+            <p class="body-medium section-description">Personnalisez vos catégories de documents</p>
+          </div>
+        </div>
+
+        <SubcategoryManager />
+      </section>
+
+      <!-- App Information Section -->
+      <section class="settings-section md-card animate-slide-in-up" style="animation-delay: 150ms">
         <div class="section-header">
           <div class="section-icon">
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor">
@@ -134,7 +154,7 @@
       </section>
 
       <!-- Danger Zone -->
-      <section class="settings-section md-card danger-section animate-slide-in-up" style="animation-delay: 150ms">
+      <section class="settings-section md-card danger-section animate-slide-in-up" style="animation-delay: 200ms">
         <div class="section-header">
           <div class="section-icon danger-icon">
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor">
@@ -204,6 +224,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
+import SubcategoryManager from '../components/SubcategoryManager.vue'
 
 const router = useRouter()
 const archivePath = ref('')
