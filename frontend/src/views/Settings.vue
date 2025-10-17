@@ -118,6 +118,21 @@
         <SubcategoryManager />
       </section>
 
+      <!-- Classification Keywords Section -->
+      <section class="settings-section md-card animate-slide-in-up" style="animation-delay: 125ms">
+        <div class="section-header">
+          <div class="section-icon">
+            <span class="material-icons" style="font-size: 32px; color: currentColor;">label</span>
+          </div>
+          <div>
+            <h2 class="title-large">Mots-clés de classification</h2>
+            <p class="body-medium section-description">Personnalisez les mots-clés utilisés pour la classification automatique</p>
+          </div>
+        </div>
+
+        <KeywordsManager />
+      </section>
+
       <!-- App Information Section -->
       <section class="settings-section md-card animate-slide-in-up" style="animation-delay: 150ms">
         <div class="section-header">
@@ -225,6 +240,7 @@ import { useRouter } from 'vue-router'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import SubcategoryManager from '../components/SubcategoryManager.vue'
+import KeywordsManager from '../components/KeywordsManager.vue'
 
 const router = useRouter()
 const archivePath = ref('')
