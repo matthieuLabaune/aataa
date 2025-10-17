@@ -354,14 +354,18 @@ impl Classifier {
     fn suggest_subcategory(&self, category: &MainCategory, text: &str) -> Option<String> {
         match category {
             MainCategory::Financier => {
-                if text.contains("edf") || text.contains("électricité") {
-                    Some("Facture énergie".to_string())
-                } else if text.contains("sfr") || text.contains("orange") || text.contains("free") {
-                    Some("Facture télécom".to_string())
+                // Ordre important : vérifier les termes spécifiques d'abord
+                if text.contains("facture") {
+                    // Facture spécifique
+                    if text.contains("edf") || text.contains("électricité") {
+                        Some("Facture énergie".to_string())
+                    } else if text.contains("sfr") || text.contains("orange") || text.contains("free") {
+                        Some("Facture télécom".to_string())
+                    } else {
+                        Some("Facture fournisseur".to_string())
+                    }
                 } else if text.contains("relevé") || text.contains("iban") {
                     Some("Relevé bancaire".to_string())
-                } else if text.contains("facture") {
-                    Some("Facture fournisseur".to_string())
                 } else {
                     None
                 }
