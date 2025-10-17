@@ -4,8 +4,9 @@
     <header class="md-top-app-bar">
       <div class="app-bar-content">
         <div class="app-bar-title">
-          <h1 class="headline-medium">AATAA</h1>
-          <span class="body-small app-subtitle">Archivage intelligent</span>
+          <span class="material-icons app-icon">lock</span>
+          <h1 class="headline-medium">PaperVault</h1>
+          <span class="body-small app-subtitle">Coffre-fort documentaire</span>
         </div>
       </div>
     </header>
@@ -793,8 +794,13 @@ onMounted(() => {
 
 .app-bar-title {
   display: flex;
-  align-items: baseline;
-  gap: var(--md-sys-spacing-md);
+  align-items: center;
+  gap: var(--md-sys-spacing-sm);
+}
+
+.app-icon {
+  font-size: 32px;
+  color: var(--md-sys-color-primary);
 }
 
 .app-bar-title h1 {
@@ -804,6 +810,7 @@ onMounted(() => {
 
 .app-subtitle {
   color: var(--md-sys-color-on-surface-variant);
+  margin-left: var(--md-sys-spacing-sm);
 }
 
 /* Main Content */
@@ -893,7 +900,46 @@ onMounted(() => {
   color: var(--md-sys-color-on-surface-variant);
 }
 
-/* OCR Selection */
+/* OCR Type Inline */
+.ocr-type-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-sm);
+  padding: var(--md-sys-spacing-md);
+  background-color: var(--md-sys-color-surface-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+  justify-content: center;
+}
+
+.md-select-compact {
+  padding: var(--md-sys-spacing-xs) var(--md-sys-spacing-md);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size: var(--md-sys-typescale-body-small-size);
+  cursor: pointer;
+}
+
+/* Dashboard Section */
+.dashboard-section {
+  margin-bottom: var(--md-sys-spacing-2xl);
+}
+
+.dashboard-title {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-sm);
+  margin-bottom: var(--md-sys-spacing-lg);
+  color: var(--md-sys-color-on-surface);
+}
+
+.dashboard-title .material-icons {
+  font-size: 28px;
+}
+
+/* OCR Selection (old) */
 .ocr-selection {
   display: flex;
   flex-direction: column;

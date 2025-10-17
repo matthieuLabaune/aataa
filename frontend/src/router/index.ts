@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
+import Explorer from '../views/Explorer.vue'
 import Trash from '../views/Trash.vue'
 import Settings from '../views/Settings.vue'
 
@@ -10,6 +11,11 @@ const router = createRouter({
             path: '/',
             name: 'home',
             component: Home
+        },
+        {
+            path: '/explorer',
+            name: 'explorer',
+            component: Explorer
         },
         {
             path: '/trash',

@@ -2,12 +2,9 @@
   <nav class="navigation-rail">
     <div class="rail-header">
       <div class="app-logo">
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <rect width="32" height="32" rx="8" :fill="currentColor" />
-          <path d="M10 12L16 18L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M10 18L16 24L22 18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+        <span class="material-icons logo-icon">lock</span>
       </div>
+      <span class="app-name body-small">PaperVault</span>
     </div>
 
     <div class="rail-destinations">
@@ -15,12 +12,19 @@
         <div class="rail-item-container">
           <div class="rail-item-indicator"></div>
           <div class="rail-item-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <polyline points="9 22 9 12 15 12 15 22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <span class="material-icons">home</span>
           </div>
           <span class="rail-item-label">Accueil</span>
+        </div>
+      </router-link>
+
+      <router-link to="/explorer" class="rail-item" :class="{ active: $route.path === '/explorer' }">
+        <div class="rail-item-container">
+          <div class="rail-item-indicator"></div>
+          <div class="rail-item-icon">
+            <span class="material-icons">folder_open</span>
+          </div>
+          <span class="rail-item-label">Explorateur</span>
         </div>
       </router-link>
 
@@ -28,10 +32,7 @@
         <div class="rail-item-container">
           <div class="rail-item-indicator"></div>
           <div class="rail-item-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <polyline points="3 6 5 6 21 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <span class="material-icons">delete</span>
             <span v-if="deletedCount > 0" class="md-badge">{{ deletedCount }}</span>
           </div>
           <span class="rail-item-label">Corbeille</span>
@@ -52,7 +53,6 @@ import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 
 const deletedCount = ref(0);
-const currentColor = 'var(--md-sys-color-primary)';
 
 const loadDeletedCount = async () => {
   try {
@@ -89,14 +89,37 @@ onMounted(() => {
 .rail-header {
   padding: var(--md-sys-spacing-md) 0;
   margin-bottom: var(--md-sys-spacing-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--md-sys-spacing-xs);
 }
 
 .app-logo {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 48px;
+  height: 48px;
+  background-color: var(--md-sys-color-primary);
+  border-radius: var(--md-sys-shape-corner-medium);
   cursor: pointer;
   transition: transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+}
+
+.logo-icon {
+  font-size: 28px;
+  color: var(--md-sys-color-on-primary);
+}
+
+.app-name {
+  color: var(--md-sys-color-on-surface-variant);
+  font-weight: 500;
+  text-align: center;
+}
+
+.rail-item-icon .material-icons {
+  font-size: 24px;
 }
 
 .app-logo:hover {
