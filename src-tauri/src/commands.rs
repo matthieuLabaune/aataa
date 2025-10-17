@@ -35,9 +35,10 @@ fn extract_year_from_text(text: &str) -> Option<String> {
         .map(|m| m.as_str().to_string())
 }
 
-#[command]
+#[tauri::command]
 pub async fn process_file(
     file_path: String,
+    ocr_type: String, // OCR type selection: "standard", "handwritten", "printed", or "caption"
     state: tauri::State<'_, AppState>,
 ) -> Result<Document, String> {
     let path = PathBuf::from(&file_path);
@@ -55,7 +56,14 @@ pub async fn process_file(
         .unwrap_or("unknown")
         .to_string();
 
-    // Perform OCR
+    // Perform OCR (currently using Tesseract only, OCR type parameter ready for future implementation)
+    // TODO: Implement different OCR engines based on ocr_type parameter
+    // - "standard": Tesseract (current implementation)
+    // - "handwritten": TrOCR microsoft/trocr-base-handwritten
+    // - "printed": TrOCR microsoft/trocr-base-printed
+    // - "caption": BLIP Salesforce/blip-image-captioning-base
+    let _ = ocr_type; // Prevent unused variable warning
+    
     let mut ocr = state.ocr.lock().map_err(|e| e.to_string())?;
     let ocr_text = if path.extension().and_then(|s| s.to_str()) == Some("pdf") {
         ocr.extract_text_from_pdf(&path)
@@ -100,6 +108,7 @@ pub async fn process_file(
         created_at: Local::now().to_rfc3339(),
         file_size,
         notes: None,
+        deleted_at: None, // Document actif par défaut
     };
 
     // Save to database
@@ -128,6 +137,35 @@ pub async fn search_documents(
 pub async fn delete_document(id: String, state: tauri::State<'_, AppState>) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db.delete_document(&id).map_err(|e| e.to_string())
+}
+
+#[command]
+pub async fn get_deleted_documents(state: tauri::State<'_, AppState>) -> Result<Vec<Document>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.get_deleted_documents().map_err(|e| e.to_string())
+}
+
+#[command]
+pub async fn restore_document(id: String, state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.restore_document(&id).map_err(|e| e.to_string())
+}
+
+#[command]
+pub async fn permanently_delete_document(id: String, state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    
+    // Récupère le document pour obtenir le chemin du fichier
+    let deleted_docs = db.get_deleted_documents().map_err(|e| e.to_string())?;
+    let doc = deleted_docs.iter().find(|d| d.id == id)
+        .ok_or_else(|| "Document non trouvé dans la corbeille".to_string())?;
+    
+    // Supprime le fichier physique du disque
+    std::fs::remove_file(&doc.file_path)
+        .map_err(|e| format!("Erreur lors de la suppression du fichier: {}", e))?;
+    
+    // Supprime l'entrée de la base de données
+    db.permanently_delete_document(&id).map_err(|e| e.to_string())
 }
 
 #[command]
