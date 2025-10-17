@@ -63,7 +63,7 @@ pub async fn process_file(
     // - "printed": TrOCR microsoft/trocr-base-printed
     // - "caption": BLIP Salesforce/blip-image-captioning-base
     let _ = ocr_type; // Prevent unused variable warning
-    
+
     let mut ocr = state.ocr.lock().map_err(|e| e.to_string())?;
     let ocr_text = if path.extension().and_then(|s| s.to_str()) == Some("pdf") {
         ocr.extract_text_from_pdf(&path)
@@ -73,9 +73,9 @@ pub async fn process_file(
             .map_err(|e| e.to_string())?
     };
 
-    // Classify document
-    let doc_type = state.classifier.classify(&ocr_text);
-    let tags = state.classifier.extract_tags(&ocr_text);
+    // Classify document (NEW: returns ClassificationResult with category, subcategory, tags)
+    let classification = state.classifier.classify_detailed(&ocr_text);
+    let doc_type = state.classifier.classify(&ocr_text); // Keep old method for compatibility
     let new_name = state
         .classifier
         .generate_filename(&doc_type, &original_name);
@@ -85,16 +85,21 @@ pub async fn process_file(
         .or_else(|| extract_year_from_text(&ocr_text))
         .unwrap_or_else(|| Local::now().format("%Y").to_string());
 
-    // Copy file to archive with folder organization: TYPE/YEAR/
+    // Copy file to archive with folder organization: CATEGORY/YEAR/
     let archive_path = state.archive_path.lock().map_err(|e| e.to_string())?;
 
-    // Create subfolder structure: DocumentType/Year/
-    let type_folder = archive_path.join(&doc_type.name).join(&year);
+    // Create subfolder structure: Category/Year/
+    let category_name = classification.category.to_string();
+    let type_folder = archive_path.join(&category_name).join(&year);
     std::fs::create_dir_all(&type_folder).map_err(|e| e.to_string())?;
 
     let new_path = type_folder.join(&new_name);
 
     std::fs::copy(&path, &new_path).map_err(|e| e.to_string())?;
+
+    // Merge extracted tags with suggested tags
+    let mut all_tags = classification.suggested_tags.clone();
+    all_tags.push(year.clone()); // Add year as a tag
 
     // Create document record
     let document = Document {
@@ -103,7 +108,9 @@ pub async fn process_file(
         new_name,
         file_path: new_path.to_str().unwrap_or("").to_string(),
         document_type: doc_type.name,
-        tags,
+        category: category_name,
+        subcategory: classification.subcategory,
+        tags: all_tags,
         ocr_text,
         created_at: Local::now().to_rfc3339(),
         file_size,
@@ -140,7 +147,9 @@ pub async fn delete_document(id: String, state: tauri::State<'_, AppState>) -> R
 }
 
 #[command]
-pub async fn get_deleted_documents(state: tauri::State<'_, AppState>) -> Result<Vec<Document>, String> {
+pub async fn get_deleted_documents(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<Document>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db.get_deleted_documents().map_err(|e| e.to_string())
 }
@@ -152,20 +161,26 @@ pub async fn restore_document(id: String, state: tauri::State<'_, AppState>) -> 
 }
 
 #[command]
-pub async fn permanently_delete_document(id: String, state: tauri::State<'_, AppState>) -> Result<(), String> {
+pub async fn permanently_delete_document(
+    id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    
+
     // Récupère le document pour obtenir le chemin du fichier
     let deleted_docs = db.get_deleted_documents().map_err(|e| e.to_string())?;
-    let doc = deleted_docs.iter().find(|d| d.id == id)
+    let doc = deleted_docs
+        .iter()
+        .find(|d| d.id == id)
         .ok_or_else(|| "Document non trouvé dans la corbeille".to_string())?;
-    
+
     // Supprime le fichier physique du disque
     std::fs::remove_file(&doc.file_path)
         .map_err(|e| format!("Erreur lors de la suppression du fichier: {}", e))?;
-    
+
     // Supprime l'entrée de la base de données
-    db.permanently_delete_document(&id).map_err(|e| e.to_string())
+    db.permanently_delete_document(&id)
+        .map_err(|e| e.to_string())
 }
 
 #[command]
@@ -526,8 +541,50 @@ pub async fn generate_image_caption(
     if response.success {
         Ok(response.caption.unwrap_or_default())
     } else {
-        Err(response
-            .error
-            .unwrap_or_else(|| "Erreur inconnue".to_string()))
+        Err(response.error.unwrap_or_else(|| "Erreur inconnue".to_string()))
     }
+}
+
+// ===== NOUVELLES COMMANDES POUR GESTION DES CATÉGORIES =====
+
+#[command]
+pub async fn get_main_categories() -> Result<Vec<String>, String> {
+    use crate::models::MainCategory;
+    Ok(MainCategory::all().iter().map(|c| c.to_string()).collect())
+}
+
+#[command]
+pub async fn get_subcategories(
+    category: Option<String>,
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<crate::models::Subcategory>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.get_subcategories(category.as_deref())
+        .map_err(|e| e.to_string())
+}
+
+#[command]
+pub async fn add_subcategory(
+    category: String,
+    name: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<i64, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.add_subcategory(&category, &name)
+        .map_err(|e| e.to_string())
+}
+
+#[command]
+pub async fn delete_subcategory(
+    id: i64,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.delete_subcategory(id).map_err(|e| e.to_string())
+}
+
+#[command]
+pub async fn get_all_tags(state: tauri::State<'_, AppState>) -> Result<Vec<crate::models::Tag>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.get_all_tags().map_err(|e| e.to_string())
 }

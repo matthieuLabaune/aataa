@@ -19,7 +19,7 @@
             <circle cx="8" cy="8" r="6" stroke-width="2"/>
             <path d="M13 13l4 4" stroke-width="2" stroke-linecap="round"/>
           </svg>
-          <input 
+          <input
             v-model="searchQuery"
             type="text"
             placeholder="Rechercher dans les documents..."
@@ -31,15 +31,15 @@
       <!-- Filters -->
       <div class="filters-container animate-slide-in-up" style="animation-delay: 50ms">
         <div class="filter-chips">
-          <button 
+          <button
             @click="filterType = ''"
             class="md-chip"
             :class="{ 'md-chip-selected': filterType === '' }"
           >
             📂 Tous
           </button>
-          <button 
-            v-for="type in documentTypes" 
+          <button
+            v-for="type in documentTypes"
             :key="type"
             @click="filterType = type"
             class="md-chip"
@@ -132,8 +132,8 @@
 
         <!-- Documents Grid -->
         <div v-else class="documents-grid">
-          <div 
-            v-for="(doc, index) in filteredDocuments" 
+          <div
+            v-for="(doc, index) in filteredDocuments"
             :key="doc.id"
             class="md-card document-card animate-scale-in"
             :style="{ animationDelay: `${200 + index * 50}ms` }"
@@ -148,9 +148,9 @@
                 </svg>
               </button>
             </div>
-            
+
             <h3 class="title-medium doc-name">{{ doc.new_name }}</h3>
-            
+
             <div class="doc-meta body-small">
               <span class="meta-item">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor">
@@ -199,7 +199,7 @@
             </svg>
           </button>
         </div>
-        
+
         <div class="md-modal-content">
           <div class="modal-info-grid">
             <div class="info-item">
@@ -266,15 +266,15 @@
             </svg>
           </button>
         </div>
-        
+
         <div class="md-modal-content">
           <!-- Name Field -->
           <div class="form-field">
             <label class="label-large">Nom du document</label>
             <div class="md-text-field">
-              <input 
-                v-model="editForm.name" 
-                type="text" 
+              <input
+                v-model="editForm.name"
+                type="text"
                 placeholder="Nom du document"
               />
             </div>
@@ -284,9 +284,9 @@
           <div class="form-field">
             <label class="label-large">Type</label>
             <div class="md-text-field">
-              <input 
-                v-model="editForm.type" 
-                type="text" 
+              <input
+                v-model="editForm.type"
+                type="text"
                 placeholder="Facture, Contrat, etc."
               />
             </div>
@@ -297,8 +297,8 @@
             <label class="label-large">Tags</label>
             <div class="tags-editor">
               <div class="current-tags">
-                <span 
-                  v-for="(tag, index) in editForm.tags" 
+                <span
+                  v-for="(tag, index) in editForm.tags"
                   :key="index"
                   class="md-chip tag-editable"
                 >
@@ -311,9 +311,9 @@
                 </span>
               </div>
               <div class="add-tag-input">
-                <input 
-                  v-model="newTag" 
-                  type="text" 
+                <input
+                  v-model="newTag"
+                  type="text"
                   placeholder="Ajouter un tag..."
                   @keyup.enter="addTag"
                   class="tag-input"
@@ -330,8 +330,8 @@
           <!-- Notes Field -->
           <div class="form-field">
             <label class="label-large">Notes</label>
-            <textarea 
-              v-model="editForm.notes" 
+            <textarea
+              v-model="editForm.notes"
               placeholder="Ajoutez des notes sur ce document..."
               class="notes-textarea"
               rows="4"
@@ -402,7 +402,7 @@ const filteredDocuments = computed(() => {
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    result = result.filter(doc => 
+    result = result.filter(doc =>
       doc.new_name.toLowerCase().includes(query) ||
       doc.original_name.toLowerCase().includes(query) ||
       doc.ocr_text.toLowerCase().includes(query) ||
@@ -442,11 +442,11 @@ async function selectFile() {
         extensions: ['pdf', 'png', 'jpg', 'jpeg']
       }]
     })
-    
+
     if (selected) {
-      await invoke('process_file', { 
+      await invoke('process_file', {
         filePath: selected,
-        ocrType: selectedOcrType.value 
+        ocrType: selectedOcrType.value
       })
       await loadDocuments()
     }
@@ -461,7 +461,7 @@ async function scanFolder() {
     const selected = await open({
       directory: true
     })
-    
+
     if (selected) {
       await invoke('scan_folder', { folderPath: selected })
       await loadDocuments()
@@ -529,7 +529,7 @@ function removeTag(index: number) {
 // Save metadata
 async function saveMetadata() {
   if (!editingDocument.value) return
-  
+
   try {
     // Update metadata
     await invoke('update_metadata', {
@@ -538,13 +538,13 @@ async function saveMetadata() {
       tags: editForm.value.tags,
       newName: editForm.value.name
     })
-    
+
     // Update notes
     await invoke('update_notes', {
       id: editingDocument.value.id,
       notes: editForm.value.notes || null
     })
-    
+
     // Reload documents
     await loadDocuments()
     editingDocument.value = null
@@ -579,7 +579,7 @@ function formatSize(bytes: number): string {
 
 onMounted(() => {
   loadDocuments()
-  
+
   // Load default OCR type from Settings
   const savedOcrType = localStorage.getItem('defaultOcrType')
   if (savedOcrType) {

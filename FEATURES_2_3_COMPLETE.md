@@ -15,12 +15,12 @@ Deux nouvelles fonctionnalités majeures ont été implémentées avec succès :
 
 #### Modal d'édition (`Home.vue`)
 - **Design Material 3** complet avec animations
-- **Accès** : 
+- **Accès** :
   - Bouton "Éditer" dans le modal de détails du document
   - Ou directement depuis les cartes de documents
-  
+
 #### Champs modifiables :
-1. **Nom du document** 
+1. **Nom du document**
    - Input text Material Design
    - Champ obligatoire
 
@@ -51,7 +51,7 @@ addTag() → Ajoute le tag si non vide et non existant
 removeTag(index) → Supprime le tag à l'index donné
 
 // Sauvegarder
-saveMetadata() → 
+saveMetadata() →
   1. Appelle invoke('update_metadata', {...})
   2. Appelle invoke('update_notes', {...})
   3. Recharge tous les documents
@@ -102,7 +102,7 @@ update_notes(id, notes)
   - Message disparaît après 3 secondes
 
 ##### 2. OCR & Reconnaissance
-- **Type OCR par défaut** : 
+- **Type OCR par défaut** :
   - Select avec 4 options :
     * Standard (Tesseract)
     * Manuscrit (TrOCR)

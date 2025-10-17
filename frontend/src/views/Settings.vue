@@ -173,7 +173,7 @@
             <path d="M24 12v12M24 30v.01" stroke-width="3" stroke-linecap="round"/>
           </svg>
         </div>
-        
+
         <div class="md-modal-content">
           <h2 class="title-large">Réinitialiser l'application ?</h2>
           <p class="body-large modal-text">
@@ -216,7 +216,7 @@ async function loadSettings() {
   try {
     const path = await invoke<string>('get_archive_path')
     archivePath.value = path
-    
+
     // Load OCR type from localStorage
     const savedOcrType = localStorage.getItem('defaultOcrType')
     if (savedOcrType) {
@@ -234,12 +234,12 @@ async function selectArchivePath() {
       directory: true,
       title: 'Sélectionner le dossier d\'archive'
     })
-    
+
     if (selected) {
       await invoke('set_archive_path', { path: selected })
       archivePath.value = selected
       archivePathChanged.value = true
-      
+
       // Hide success message after 3 seconds
       setTimeout(() => {
         archivePathChanged.value = false

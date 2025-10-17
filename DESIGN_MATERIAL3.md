@@ -12,7 +12,7 @@ AATAA dispose maintenant d'une interface Material Design 3 complète et professi
 
 #### Couleurs
 - **Primary**: `#6750A4` (violet Material)
-- **Secondary**: `#625B71` 
+- **Secondary**: `#625B71`
 - **Tertiary**: `#7D5260`
 - **Error**: `#B3261E`
 - **Surface**: 5 niveaux de conteneurs
@@ -26,7 +26,7 @@ AATAA dispose maintenant d'une interface Material Design 3 complète et professi
 - **Display**: 3 tailles (Large, Medium, Small)
 - **Headline**: 3 tailles
 - **Title**: 3 tailles
-- **Body**: 3 tailles  
+- **Body**: 3 tailles
 - **Label**: 3 tailles
 - Police: Roboto (système fallback)
 

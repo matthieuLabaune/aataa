@@ -1,6 +1,6 @@
-use regex::Regex;
+use crate::models::{DocumentType, MainCategory, ClassificationResult};
 use chrono::Local;
-use crate::models::DocumentType;
+use regex::Regex;
 
 pub struct Classifier {
     patterns: Vec<ClassificationPattern>,
@@ -23,10 +23,7 @@ impl Classifier {
                     pattern: String::new(),
                     prefix: "FACT".to_string(),
                 },
-                required_keywords: vec![
-                    "facture".to_string(),
-                    "invoice".to_string(),
-                ],
+                required_keywords: vec!["facture".to_string(), "invoice".to_string()],
                 support_keywords: vec![
                     "montant".to_string(),
                     "total".to_string(),
@@ -51,10 +48,7 @@ impl Classifier {
                     pattern: String::new(),
                     prefix: "CONT".to_string(),
                 },
-                required_keywords: vec![
-                    "contrat".to_string(),
-                    "contract".to_string(),
-                ],
+                required_keywords: vec!["contrat".to_string(), "contract".to_string()],
                 support_keywords: vec![
                     "signataire".to_string(),
                     "signature".to_string(),
@@ -64,9 +58,7 @@ impl Classifier {
                     "résiliation".to_string(),
                     "accord".to_string(),
                 ],
-                blocker_keywords: vec![
-                    "facture".to_string(),
-                ],
+                blocker_keywords: vec!["facture".to_string()],
             },
             // RELEVÉ BANCAIRE
             ClassificationPattern {
@@ -75,10 +67,7 @@ impl Classifier {
                     pattern: String::new(),
                     prefix: "BANK".to_string(),
                 },
-                required_keywords: vec![
-                    "relevé".to_string(),
-                    "statement".to_string(),
-                ],
+                required_keywords: vec!["relevé".to_string(), "statement".to_string()],
                 support_keywords: vec![
                     "compte".to_string(),
                     "iban".to_string(),
@@ -108,9 +97,7 @@ impl Classifier {
                     "urssaf".to_string(),
                     "employeur".to_string(),
                 ],
-                blocker_keywords: vec![
-                    "facture".to_string(),
-                ],
+                blocker_keywords: vec!["facture".to_string()],
             },
             // DOCUMENT OFFICIEL
             ClassificationPattern {
@@ -150,9 +137,7 @@ impl Classifier {
                     "merci".to_string(),
                     "thank you".to_string(),
                 ],
-                blocker_keywords: vec![
-                    "facture".to_string(),
-                ],
+                blocker_keywords: vec!["facture".to_string()],
             },
         ];
 
@@ -166,7 +151,7 @@ impl Classifier {
 
         for pattern in &self.patterns {
             let score = self.calculate_score(&text_lower, pattern);
-            
+
             if score > best_score {
                 best_score = score;
                 best_type = pattern.doc_type.clone();
@@ -175,12 +160,221 @@ impl Classifier {
 
         // Seuil minimum de confiance : 60%
         if best_score < 0.6 {
-            eprintln!("⚠️  Classification incertaine (score: {:.2}%) - Type par défaut utilisé", best_score * 100.0);
+            eprintln!(
+                "⚠️  Classification incertaine (score: {:.2}%) - Type par défaut utilisé",
+                best_score * 100.0
+            );
             return DocumentType::default();
         }
 
-        eprintln!("✓ Classification: {} (score: {:.2}%)", best_type.name, best_score * 100.0);
+        eprintln!(
+            "✓ Classification: {} (score: {:.2}%)",
+            best_type.name,
+            best_score * 100.0
+        );
         best_type
+    }
+
+    /// Classification enrichie avec catégorie, sous-catégorie et tags suggérés
+    pub fn classify_detailed(&self, text: &str) -> ClassificationResult {
+        let text_lower = text.to_lowercase();
+        
+        // 1. Déterminer la catégorie principale
+        let category = self.detect_main_category(&text_lower);
+        
+        // 2. Suggérer une sous-catégorie basée sur le contenu
+        let subcategory = self.suggest_subcategory(&category, &text_lower);
+        
+        // 3. Extraire les tags automatiquement
+        let suggested_tags = self.extract_smart_tags(&text_lower);
+        
+        // 4. Calculer la confiance
+        let confidence = self.calculate_category_confidence(&category, &text_lower);
+        
+        if confidence < 0.6 {
+            eprintln!("⚠️  Catégorie incertaine (score: {:.2}%) - Type 'Autre' utilisé", confidence * 100.0);
+            return ClassificationResult {
+                category: MainCategory::Autre,
+                subcategory: None,
+                suggested_tags,
+                confidence,
+            };
+        }
+
+        eprintln!("✓ Catégorie: {} (score: {:.2}%)", category.to_string(), confidence * 100.0);
+        if let Some(ref sub) = subcategory {
+            eprintln!("  → Sous-catégorie suggérée: {}", sub);
+        }
+        
+        ClassificationResult {
+            category,
+            subcategory,
+            suggested_tags,
+            confidence,
+        }
+    }
+
+    fn detect_main_category(&self, text: &str) -> MainCategory {
+        let mut scores = vec![
+            (MainCategory::Financier, self.score_financier(text)),
+            (MainCategory::Administratif, self.score_administratif(text)),
+            (MainCategory::Sante, self.score_sante(text)),
+            (MainCategory::Professionnel, self.score_professionnel(text)),
+            (MainCategory::Immobilier, self.score_immobilier(text)),
+            (MainCategory::Academique, self.score_academique(text)),
+            (MainCategory::Personnel, self.score_personnel(text)),
+        ];
+
+        scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        
+        if scores[0].1 > 0.3 {
+            scores[0].0.clone()
+        } else {
+            MainCategory::Autre
+        }
+    }
+
+    fn score_financier(&self, text: &str) -> f32 {
+        let keywords = ["facture", "invoice", "relevé", "bancaire", "iban", "virement", "crédit", "débit"];
+        self.keyword_score(text, &keywords)
+    }
+
+    fn score_administratif(&self, text: &str) -> f32 {
+        let keywords = ["carte", "identité", "passeport", "attestation", "certificat", "imposition", "fiscal"];
+        self.keyword_score(text, &keywords)
+    }
+
+    fn score_sante(&self, text: &str) -> f32 {
+        let keywords = ["ordonnance", "médical", "médecin", "cpam", "sécurité sociale", "mutuelle", "pharmacie"];
+        self.keyword_score(text, &keywords)
+    }
+
+    fn score_professionnel(&self, text: &str) -> f32 {
+        let keywords = ["contrat de travail", "fiche de paie", "salaire", "employeur", "urssaf", "bulletin"];
+        self.keyword_score(text, &keywords)
+    }
+
+    fn score_immobilier(&self, text: &str) -> f32 {
+        let keywords = ["bail", "location", "loyer", "propriété", "acte", "notaire", "diagnostic"];
+        self.keyword_score(text, &keywords)
+    }
+
+    fn score_academique(&self, text: &str) -> f32 {
+        let keywords = ["article", "publication", "thèse", "diplôme", "université", "recherche", "doi"];
+        self.keyword_score(text, &keywords)
+    }
+
+    fn score_personnel(&self, text: &str) -> f32 {
+        let keywords = ["ticket", "reçu", "caisse", "courrier", "lettre"];
+        self.keyword_score(text, &keywords)
+    }
+
+    fn keyword_score(&self, text: &str, keywords: &[&str]) -> f32 {
+        let matches = keywords.iter().filter(|k| text.contains(*k)).count();
+        matches as f32 / keywords.len() as f32
+    }
+
+    fn calculate_category_confidence(&self, category: &MainCategory, text: &str) -> f32 {
+        match category {
+            MainCategory::Financier => self.score_financier(text),
+            MainCategory::Administratif => self.score_administratif(text),
+            MainCategory::Sante => self.score_sante(text),
+            MainCategory::Professionnel => self.score_professionnel(text),
+            MainCategory::Immobilier => self.score_immobilier(text),
+            MainCategory::Academique => self.score_academique(text),
+            MainCategory::Personnel => self.score_personnel(text),
+            MainCategory::Autre => 0.5,
+        }
+    }
+
+    fn suggest_subcategory(&self, category: &MainCategory, text: &str) -> Option<String> {
+        match category {
+            MainCategory::Financier => {
+                if text.contains("edf") || text.contains("électricité") {
+                    Some("Facture énergie".to_string())
+                } else if text.contains("sfr") || text.contains("orange") || text.contains("free") {
+                    Some("Facture télécom".to_string())
+                } else if text.contains("relevé") || text.contains("iban") {
+                    Some("Relevé bancaire".to_string())
+                } else if text.contains("facture") {
+                    Some("Facture fournisseur".to_string())
+                } else {
+                    None
+                }
+            },
+            MainCategory::Sante => {
+                if text.contains("ordonnance") {
+                    Some("Ordonnance".to_string())
+                } else if text.contains("cpam") || text.contains("remboursement") {
+                    Some("Remboursement sécu".to_string())
+                } else if text.contains("analyse") || text.contains("résultat") {
+                    Some("Résultat analyse".to_string())
+                } else {
+                    None
+                }
+            },
+            MainCategory::Professionnel => {
+                if text.contains("fiche de paie") || text.contains("salaire") {
+                    Some("Fiche de paie".to_string())
+                } else if text.contains("contrat") {
+                    Some("Contrat de travail".to_string())
+                } else {
+                    None
+                }
+            },
+            _ => None,
+        }
+    }
+
+    fn extract_smart_tags(&self, text: &str) -> Vec<String> {
+        let mut tags = Vec::new();
+
+        // Extraire l'année
+        if let Some(year) = self.extract_year(text) {
+            tags.push(year);
+        }
+
+        // Extraire le montant
+        if let Some(amount) = self.extract_amount(text) {
+            tags.push(format!("{}€", amount));
+        }
+
+        // Extraire entité (société, organisme)
+        if let Some(entity) = self.extract_entity(text) {
+            tags.push(entity);
+        }
+
+        tags
+    }
+
+    fn extract_year(&self, text: &str) -> Option<String> {
+        let re = Regex::new(r"(20[0-2]\d)").ok()?;
+        re.captures(text)
+            .and_then(|caps| caps.get(1))
+            .map(|m| m.as_str().to_string())
+    }
+
+    fn extract_amount(&self, text: &str) -> Option<String> {
+        let re = Regex::new(r"(\d+[.,]\d{2})\s*€").ok()?;
+        re.captures(text)
+            .and_then(|caps| caps.get(1))
+            .map(|m| m.as_str().replace(",", "."))
+    }
+
+    fn extract_entity(&self, text: &str) -> Option<String> {
+        // Chercher des noms connus
+        let entities = vec![
+            "EDF", "Orange", "SFR", "Free", "Bouygues", 
+            "CPAM", "Mutuelle", "Banque", "La Poste"
+        ];
+        
+        for entity in entities {
+            if text.to_lowercase().contains(&entity.to_lowercase()) {
+                return Some(entity.to_string());
+            }
+        }
+        
+        None
     }
 
     fn calculate_score(&self, text: &str, pattern: &ClassificationPattern) -> f32 {
@@ -192,7 +386,9 @@ impl Classifier {
         }
 
         // 2. Compter les mots requis (au moins 1 doit être présent)
-        let required_count = pattern.required_keywords.iter()
+        let required_count = pattern
+            .required_keywords
+            .iter()
             .filter(|word| text.contains(word.as_str()))
             .count();
 
@@ -204,10 +400,12 @@ impl Classifier {
         let required_score = required_count as f32 / pattern.required_keywords.len() as f32;
 
         // 4. Bonus pour les mots de support (30% du score)
-        let support_count = pattern.support_keywords.iter()
+        let support_count = pattern
+            .support_keywords
+            .iter()
             .filter(|word| text.contains(word.as_str()))
             .count();
-        
+
         let support_score = if !pattern.support_keywords.is_empty() {
             support_count as f32 / pattern.support_keywords.len() as f32
         } else {
@@ -362,7 +560,8 @@ mod tests {
     #[test]
     fn test_extract_tags_multiple() {
         let classifier = Classifier::new();
-        let text = "Facture ACME S.A.S - Date: 15/03/2024 - Montant: 150.00€ - Contact: info@acme.com";
+        let text =
+            "Facture ACME S.A.S - Date: 15/03/2024 - Montant: 150.00€ - Contact: info@acme.com";
         let tags = classifier.extract_tags(text);
         assert!(tags.contains(&"contains_date".to_string()));
         assert!(tags.contains(&"contains_amount".to_string()));

@@ -12,9 +12,9 @@
           <h1 class="headline-medium">Corbeille</h1>
           <span class="body-small app-subtitle">{{ deletedDocuments.length }} documents</span>
         </div>
-        <button 
-          v-if="deletedDocuments.length > 0" 
-          @click="showEmptyTrashConfirm = true" 
+        <button
+          v-if="deletedDocuments.length > 0"
+          @click="showEmptyTrashConfirm = true"
           class="md-outlined-button md-ripple"
         >
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor">
@@ -53,8 +53,8 @@
 
       <!-- Documents List -->
       <div v-else class="documents-list">
-        <div 
-          v-for="(doc, index) in deletedDocuments" 
+        <div
+          v-for="(doc, index) in deletedDocuments"
           :key="doc.id"
           class="md-list-item document-item animate-slide-in-up"
           :style="{ animationDelay: `${index * 30}ms` }"
@@ -122,11 +122,11 @@
             <path d="M24 12v12M24 30v.01" stroke-width="3" stroke-linecap="round"/>
           </svg>
         </div>
-        
+
         <div class="md-modal-content">
           <h2 class="title-large">Supprimer définitivement ?</h2>
           <p class="body-large modal-text">
-            Êtes-vous sûr de vouloir supprimer définitivement 
+            Êtes-vous sûr de vouloir supprimer définitivement
             <strong>{{ documentToDelete.new_name }}</strong> ?
             Cette action est irréversible.
           </p>
@@ -156,11 +156,11 @@
             <path d="M24 12v12M24 30v.01" stroke-width="3" stroke-linecap="round"/>
           </svg>
         </div>
-        
+
         <div class="md-modal-content">
           <h2 class="title-large">Vider la corbeille ?</h2>
           <p class="body-large modal-text">
-            Êtes-vous sûr de vouloir supprimer définitivement 
+            Êtes-vous sûr de vouloir supprimer définitivement
             <strong>{{ deletedDocuments.length }} documents</strong> ?
             Cette action est irréversible.
           </p>
@@ -277,7 +277,7 @@ function formatDeletedDate(dateStr: string): string {
   if (diffMins < 60) return `il y a ${diffMins} min`
   if (diffHours < 24) return `il y a ${diffHours}h`
   if (diffDays < 7) return `il y a ${diffDays} jour${diffDays > 1 ? 's' : ''}`
-  
+
   return date.toLocaleDateString('fr-FR', {
     day: '2-digit',
     month: '2-digit',

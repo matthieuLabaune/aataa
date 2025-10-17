@@ -53,9 +53,9 @@ async function selectFile() {
       extensions: ['pdf', 'png', 'jpg', 'jpeg']
     }]
   })
-  
+
   if (selected) {
-    await invoke('process_file', { 
+    await invoke('process_file', {
       filePath: selected,
       ocrType: selectedOcrType.value  // ✅ Passage du type OCR
     })
@@ -68,7 +68,7 @@ async function selectFile() {
 ```typescript
 onMounted(() => {
   loadDocuments()
-  
+
   // Charge le type OCR par défaut depuis Settings
   const savedOcrType = localStorage.getItem('defaultOcrType')
   if (savedOcrType) {
@@ -90,7 +90,7 @@ watch(defaultOcrType, (newValue) => {
 async function loadSettings() {
   const path = await invoke<string>('get_archive_path')
   archivePath.value = path
-  
+
   // Charge le type OCR depuis localStorage
   const savedOcrType = localStorage.getItem('defaultOcrType')
   if (savedOcrType) {

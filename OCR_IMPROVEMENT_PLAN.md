@@ -67,17 +67,17 @@ Utiliser des patterns combinés :
 ```rust
 pub fn classify_with_confidence(&self, text: &str) -> (String, f32) {
     let mut scores: HashMap<String, f32> = HashMap::new();
-    
+
     for (doc_type, patterns) in &self.patterns {
         let score = calculate_score(text, patterns);
         scores.insert(doc_type.clone(), score);
     }
-    
+
     // Retourner le type avec le meilleur score
     let best = scores.iter()
         .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
         .unwrap();
-    
+
     (best.0.clone(), *best.1)
 }
 ```
@@ -119,12 +119,12 @@ fn analyze_structure(text: &str) -> DocumentStructure {
 pub fn classify_hybrid(&self, text: &str) -> String {
     let structure = analyze_structure(text);
     let keyword_score = classify_by_keywords(text);
-    
+
     // Combiner les deux approches
     if structure.has_table && structure.has_amounts && keyword_score["facture"] > 0.5 {
         return "Facture".to_string();
     }
-    
+
     // Autres règles...
 }
 ```
@@ -263,7 +263,7 @@ impl DocumentClassifier {
 
         for (doc_type, pattern) in &self.patterns {
             let score = self.calculate_score(&text_lower, pattern);
-            
+
             if score > best_score {
                 best_score = score;
                 best_type = doc_type.clone();
@@ -322,7 +322,7 @@ let (doc_type, confidence) = state.classifier.classify_with_confidence(&ocr_text
 
 // Si confiance faible, log un warning
 if confidence < 0.7 {
-    eprintln!("Warning: Low confidence classification ({:.2}%) for {}", 
+    eprintln!("Warning: Low confidence classification ({:.2}%) for {}",
               confidence * 100.0, &original_name);
 }
 ```

@@ -1,8 +1,8 @@
 # 📦 Résumé du Commit - ML OCR Implementation
 
-**Date:** 16 octobre 2025  
-**Commit:** `6f324f7`  
-**Branche:** `develop`  
+**Date:** 16 octobre 2025
+**Commit:** `6f324f7`
+**Branche:** `develop`
 **Type:** Feature (feat)
 
 ---
@@ -196,7 +196,7 @@ class TrOCRExtractor:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.processor = TrOCRProcessor.from_pretrained(model_name)
         self.model = VisionEncoderDecoderModel.from_pretrained(model_name)
-    
+
     def extract_text(self, image_path):
         image = Image.open(image_path).convert("RGB")
         pixel_values = self.processor(images=image, return_tensors="pt")
@@ -213,7 +213,7 @@ class ImageCaptioner:
     def __init__(self):
         self.processor = BlipProcessor.from_pretrained(BLIP_MODEL)
         self.model = BlipForConditionalGeneration.from_pretrained(BLIP_MODEL)
-    
+
     def generate_caption(self, image_path, language="en"):
         image = Image.open(image_path).convert("RGB")
         inputs = self.processor(image, return_tensors="pt")
@@ -296,15 +296,15 @@ pip install -r python/requirements.txt
 
 ## 📊 Comparaison des Options
 
-| Critère | Option 1 (Candle) | **Option 2 (Python)** ✅ | Option 3 (Cloud) |
-|---------|-------------------|--------------------------|------------------|
-| **Complexité** | ❌ Très élevée | ✅ Simple | ✅ Simple |
-| **Maintenance** | ❌ API instable | ✅ Stable | ✅ Géré |
-| **Documentation** | ❌ Limitée | ✅ Excellente | ✅ Complète |
-| **Performances** | ⚡⚡⚡ Natif | ⚡⚡ Subprocess | ⚡⚡⚡ Network |
-| **Coût** | ✅ Gratuit | ✅ Gratuit | ❌ Payant |
-| **Vie privée** | ✅ Local | ✅ Local | ❌ Cloud |
-| **Flexibilité** | ❌ Limitée | ✅ Totale (HF) | ⚠️ Dépend API |
+| Critère           | Option 1 (Candle) | **Option 2 (Python)** ✅ | Option 3 (Cloud) |
+| ----------------- | ----------------- | ----------------------- | ---------------- |
+| **Complexité**    | ❌ Très élevée     | ✅ Simple                | ✅ Simple         |
+| **Maintenance**   | ❌ API instable    | ✅ Stable                | ✅ Géré           |
+| **Documentation** | ❌ Limitée         | ✅ Excellente            | ✅ Complète       |
+| **Performances**  | ⚡⚡⚡ Natif         | ⚡⚡ Subprocess           | ⚡⚡⚡ Network      |
+| **Coût**          | ✅ Gratuit         | ✅ Gratuit               | ❌ Payant         |
+| **Vie privée**    | ✅ Local           | ✅ Local                 | ❌ Cloud          |
+| **Flexibilité**   | ❌ Limitée         | ✅ Totale (HF)           | ⚠️ Dépend API     |
 
 **Décision:** Option 2 (Python subprocess) choisie pour sa simplicité et sa stabilité.
 
@@ -415,5 +415,5 @@ Erreur E0599: no method named `text_decoder_forward` found
 
 ---
 
-**Statut:** ✅ **Prêt pour testing et utilisation**  
+**Statut:** ✅ **Prêt pour testing et utilisation**
 **Prochaine étape:** Tests utilisateur + Collecte de feedback
