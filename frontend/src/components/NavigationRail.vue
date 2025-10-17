@@ -41,10 +41,7 @@
 
     <div class="rail-footer">
       <router-link to="/settings" class="md-icon-button" title="Paramètres">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <circle cx="12" cy="12" r="3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M12 1v6m0 6v6m5.196-13.804l-4.243 4.243m0 5.122l-4.243 4.243M23 12h-6m-6 0H5m13.804 5.196l-4.243-4.243m0-5.122l-4.243-4.243" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+        <span class="material-icons">settings</span>
       </router-link>
     </div>
   </nav>

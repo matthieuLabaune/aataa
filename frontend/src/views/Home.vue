@@ -90,27 +90,61 @@
         </select>
       </div>
 
-      <!-- Import Actions -->
-      <div class="action-section animate-slide-in-up" style="animation-delay: 150ms">
-        <button @click="selectFile" class="md-filled-button md-ripple">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-            <path d="M17 13v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2M14 7l-4-4m0 0L6 7m4-4v12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- Import Actions & Drag & Drop Zone -->
+      <div class="import-section animate-slide-in-up" style="animation-delay: 150ms">
+        <!-- Drag & Drop Zone -->
+        <div 
+          class="drag-drop-zone"
+          :class="{ 'drag-over': isDragging }"
+          @dragenter.prevent="handleDragEnter"
+          @dragover.prevent="handleDragOver"
+          @dragleave.prevent="handleDragLeave"
+          @drop.prevent="handleDrop"
+          @click="selectFile"
+        >
+          <svg class="drag-drop-icon" width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor">
+            <path d="M40 30v6a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-6M32 14l-8-8m0 0l-8 8m8-8v28" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          Importer un document
-        </button>
-        <button @click="scanFolder" class="md-outlined-button md-ripple">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-            <path d="M9 1H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9M9 1l8 8M9 1v8h8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Scanner un dossier
-        </button>
+          <h3 class="title-medium">Glissez vos documents ici</h3>
+          <p class="body-medium">ou cliquez pour sélectionner un fichier</p>
+          <p class="body-small drag-drop-hint">PDF, JPG, PNG - Max 50 Mo</p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+          <button @click="selectFile" class="md-filled-button md-ripple">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+              <path d="M17 13v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2M14 7l-4-4m0 0L6 7m4-4v12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Importer un document
+          </button>
+          <button @click="scanFolder" class="md-outlined-button md-ripple">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+              <path d="M9 1H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9M9 1l8 8M9 1v8h8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Scanner un dossier
+          </button>
+        </div>
       </div>
 
       <!-- Documents Section -->
       <div class="documents-section">
         <div class="section-header">
           <h2 class="title-large">Documents</h2>
-          <span class="body-large count-badge">{{ filteredDocuments.length }}</span>
+          <div class="header-actions">
+            <span class="body-large count-badge">{{ filteredDocuments.length }}</span>
+            
+            <!-- Pagination Controls -->
+            <div class="pagination-controls">
+              <select v-model="itemsPerPage" class="items-per-page-select">
+                <option :value="10">10 par page</option>
+                <option :value="25">25 par page</option>
+                <option :value="50">50 par page</option>
+                <option :value="100">100 par page</option>
+                <option :value="filteredDocuments.length">Tous ({{ filteredDocuments.length }})</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <!-- Loading State -->
@@ -133,7 +167,7 @@
         <!-- Documents Grid -->
         <div v-else class="documents-grid">
           <div
-            v-for="(doc, index) in filteredDocuments"
+            v-for="(doc, index) in paginatedDocuments"
             :key="doc.id"
             class="md-card document-card animate-scale-in"
             :style="{ animationDelay: `${200 + index * 50}ms` }"
@@ -193,6 +227,33 @@
               Ouvrir
             </button>
           </div>
+        </div>
+
+        <!-- Pagination Navigation -->
+        <div v-if="totalPages > 1" class="pagination-nav">
+          <button 
+            @click="currentPage = Math.max(1, currentPage - 1)"
+            :disabled="currentPage === 1"
+            class="md-icon-button"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+              <path d="M12 4l-6 6 6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          
+          <span class="body-medium pagination-info">
+            Page {{ currentPage }} / {{ totalPages }}
+          </span>
+          
+          <button 
+            @click="currentPage = Math.min(totalPages, currentPage + 1)"
+            :disabled="currentPage === totalPages"
+            class="md-icon-button"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+              <path d="M8 4l6 6-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -378,7 +439,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import type { Document, DocumentStats } from '../types/document'
@@ -390,6 +451,11 @@ const filterType = ref('')
 const selectedDocument = ref<Document | null>(null)
 const editingDocument = ref<Document | null>(null)
 const selectedOcrType = ref('standard') // Default OCR type
+
+// Pagination state
+const itemsPerPage = ref(25)
+const currentPage = ref(1)
+const isDragging = ref(false)
 
 // Edit form state
 const editForm = ref({
@@ -435,6 +501,25 @@ const filteredDocuments = computed(() => {
   return result
 })
 
+// Paginated documents
+const paginatedDocuments = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value
+  const end = start + itemsPerPage.value
+  
+  // Si "Tous" est sélectionné (itemsPerPage === total), retourner tout
+  if (itemsPerPage.value >= filteredDocuments.value.length) {
+    return filteredDocuments.value
+  }
+  
+  return filteredDocuments.value.slice(start, end)
+})
+
+// Total pages
+const totalPages = computed(() => {
+  if (itemsPerPage.value >= filteredDocuments.value.length) return 1
+  return Math.ceil(filteredDocuments.value.length / itemsPerPage.value)
+})
+
 // Stats
 const stats = computed<DocumentStats>(() => {
   const types = new Set(documents.value.map(d => d.document_type))
@@ -474,6 +559,46 @@ async function selectFile() {
     }
   } catch (error) {
     console.error('Failed to import document:', error)
+  }
+}
+
+// Drag & Drop handlers
+function handleDragEnter(_e: DragEvent) {
+  isDragging.value = true
+}
+
+function handleDragOver(_e: DragEvent) {
+  isDragging.value = true
+}
+
+function handleDragLeave(_e: DragEvent) {
+  isDragging.value = false
+}
+
+async function handleDrop(e: DragEvent) {
+  isDragging.value = false
+  
+  const files = e.dataTransfer?.files
+  if (!files || files.length === 0) return
+  
+  const file = files[0]
+  if (!file) return
+  
+  const validExtensions = ['pdf', 'png', 'jpg', 'jpeg']
+  const fileExt = file.name.split('.').pop()?.toLowerCase()
+  
+  if (!fileExt || !validExtensions.includes(fileExt)) {
+    alert('Format non supporté. Utilisez PDF, PNG ou JPG.')
+    return
+  }
+  
+  try {
+    // Note: Le drag & drop web ne donne pas le chemin système
+    // On utilise seulement la sélection de fichier via dialog
+    alert('Veuillez utiliser le bouton "Importer" pour l\'instant. Le drag & drop sera amélioré prochainement.')
+  } catch (error) {
+    console.error('Failed to process dropped file:', error)
+    alert(`Erreur lors du traitement du fichier: ${error}`)
   }
 }
 
@@ -628,6 +753,11 @@ function getCategoryColor(category: string): string {
   }
   return colors[category] || '#BDBDBD'
 }
+
+// Reset page when filters or items per page change
+watch([searchQuery, filterType, itemsPerPage], () => {
+  currentPage.value = 1
+})
 
 onMounted(() => {
   loadDocuments()
@@ -798,7 +928,60 @@ onMounted(() => {
   outline-offset: 2px;
 }
 
-/* Action Section */
+/* Import Section with Drag & Drop */
+.import-section {
+  margin-bottom: var(--md-sys-spacing-2xl);
+}
+
+.drag-drop-zone {
+  border: 3px dashed var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-large);
+  padding: var(--md-sys-spacing-2xl);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized);
+  background-color: var(--md-sys-color-surface-variant);
+  margin-bottom: var(--md-sys-spacing-lg);
+}
+
+.drag-drop-zone:hover {
+  border-color: var(--md-sys-color-primary);
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 8%, var(--md-sys-color-surface-variant));
+}
+
+.drag-drop-zone.drag-over {
+  border-color: var(--md-sys-color-primary);
+  background-color: color-mix(in srgb, var(--md-sys-color-primary) 15%, var(--md-sys-color-surface-variant));
+  transform: scale(1.02);
+}
+
+.drag-drop-icon {
+  margin: 0 auto var(--md-sys-spacing-md);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.drag-drop-zone h3 {
+  color: var(--md-sys-color-on-surface);
+  margin-bottom: var(--md-sys-spacing-xs);
+}
+
+.drag-drop-zone p {
+  color: var(--md-sys-color-on-surface-variant);
+  margin: var(--md-sys-spacing-xs) 0;
+}
+
+.drag-drop-hint {
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.action-buttons {
+  display: flex;
+  gap: var(--md-sys-spacing-md);
+  flex-wrap: wrap;
+}
+
+/* Action Section (fallback for old class) */
 .action-section {
   display: flex;
   gap: var(--md-sys-spacing-md);
@@ -814,8 +997,37 @@ onMounted(() => {
 .section-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--md-sys-spacing-md);
   margin-bottom: var(--md-sys-spacing-lg);
+  flex-wrap: wrap;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-md);
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-sm);
+}
+
+.items-per-page-select {
+  padding: var(--md-sys-spacing-sm) var(--md-sys-spacing-md);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-medium-font);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  cursor: pointer;
+}
+
+.items-per-page-select:hover {
+  background-color: var(--md-sys-color-surface-variant);
 }
 
 .count-badge {
@@ -857,6 +1069,28 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--md-sys-spacing-md);
+  margin-bottom: var(--md-sys-spacing-lg);
+}
+
+/* Pagination Navigation */
+.pagination-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--md-sys-spacing-lg);
+  padding: var(--md-sys-spacing-lg) 0;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.pagination-info {
+  color: var(--md-sys-color-on-surface-variant);
+  min-width: 120px;
+  text-align: center;
+}
+
+.pagination-nav button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
 }
 
 .document-card {
