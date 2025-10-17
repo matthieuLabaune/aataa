@@ -11,11 +11,15 @@ mod tests {
             new_name: format!("renamed_{}.pdf", id),
             file_path: format!("/path/to/{}.pdf", id),
             document_type: "Facture".to_string(),
+            category: "Financier".to_string(),
+            subcategory: Some("Facture fournisseur".to_string()),
+            confidence: Some(0.95),
             tags: vec!["urgent".to_string(), "important".to_string()],
             ocr_text: "Test OCR text".to_string(),
             created_at: "2024-01-01T00:00:00Z".to_string(),
             file_size: 1024,
             notes: Some("Test notes".to_string()),
+            deleted_at: None,
         }
     }
 

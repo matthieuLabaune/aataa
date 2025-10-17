@@ -9,6 +9,7 @@ pub struct Document {
     pub document_type: String,
     pub category: String,           // NEW: Catégorie principale (niveau 1)
     pub subcategory: Option<String>, // NEW: Sous-catégorie (niveau 2)
+    pub confidence: Option<f32>,     // Score de confiance de classification (0.0-1.0)
     pub tags: Vec<String>,           // Niveau 3: tags libres
     pub ocr_text: String,
     pub created_at: String,

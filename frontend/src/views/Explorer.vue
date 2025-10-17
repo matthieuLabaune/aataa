@@ -287,6 +287,9 @@
                   {{ getCategoryIcon(selectedDocument.category) }}
                 </span>
                 {{ selectedDocument.category }}
+                <span v-if="selectedDocument.confidence" class="confidence-badge" :class="getConfidenceClass(selectedDocument.confidence)">
+                  {{ Math.round(selectedDocument.confidence * 100) }}%
+                </span>
               </span>
             </div>
             <div v-if="selectedDocument.subcategory" class="info-item">
@@ -609,6 +612,13 @@ function getCategoryIcon(category: string): string {
     'Autre': 'folder'
   }
   return icons[category] || 'folder'
+}
+
+// Get confidence CSS class based on score
+function getConfidenceClass(confidence: number): string {
+  if (confidence >= 0.7) return 'confidence-high'
+  if (confidence >= 0.4) return 'confidence-medium'
+  return 'confidence-low'
 }
 
 // Get category color
@@ -1051,6 +1061,31 @@ onMounted(() => {
 
 .info-label {
   color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Confidence Badge */
+.confidence-badge {
+  display: inline-block;
+  margin-left: var(--md-sys-spacing-xs);
+  padding: 2px 8px;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.confidence-high {
+  background-color: rgba(76, 175, 80, 0.15);
+  color: #4CAF50;
+}
+
+.confidence-medium {
+  background-color: rgba(255, 152, 0, 0.15);
+  color: #FF9800;
+}
+
+.confidence-low {
+  background-color: rgba(244, 67, 54, 0.15);
+  color: #F44336;
 }
 
 .modal-tags,

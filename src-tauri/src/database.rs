@@ -39,6 +39,9 @@ impl Database {
         // Add subcategory column if it doesn't exist (NEW - migration)
         let _ = conn.execute("ALTER TABLE documents ADD COLUMN subcategory TEXT", []);
 
+        // Add confidence column if it doesn't exist (NEW - migration)
+        let _ = conn.execute("ALTER TABLE documents ADD COLUMN confidence REAL", []);
+
         // Créer table des sous-catégories (NEW)
         conn.execute(
             "CREATE TABLE IF NOT EXISTS subcategories (
@@ -229,8 +232,8 @@ impl Database {
 
     pub fn insert_document(&self, doc: &Document) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO documents (id, original_name, new_name, file_path, document_type, category, subcategory, tags, ocr_text, created_at, file_size, notes, deleted_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+            "INSERT INTO documents (id, original_name, new_name, file_path, document_type, category, subcategory, confidence, tags, ocr_text, created_at, file_size, notes, deleted_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
             rusqlite::params![
                 doc.id,
                 doc.original_name,
@@ -239,6 +242,7 @@ impl Database {
                 doc.document_type,
                 doc.category,
                 doc.subcategory,
+                doc.confidence,
                 serde_json::to_string(&doc.tags).unwrap_or_default(),
                 doc.ocr_text,
                 doc.created_at,
@@ -252,7 +256,7 @@ impl Database {
 
     pub fn get_all_documents(&self) -> Result<Vec<Document>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, original_name, new_name, file_path, document_type, category, subcategory, tags, ocr_text, created_at, file_size, notes, deleted_at
+            "SELECT id, original_name, new_name, file_path, document_type, category, subcategory, confidence, tags, ocr_text, created_at, file_size, notes, deleted_at
              FROM documents WHERE deleted_at IS NULL ORDER BY created_at DESC"
         )?;
 
@@ -266,12 +270,13 @@ impl Database {
                     document_type: row.get(4)?,
                     category: row.get::<_, Option<String>>(5)?.unwrap_or_else(|| "Autre".to_string()),
                     subcategory: row.get(6).ok(),
-                    tags: serde_json::from_str(&row.get::<_, String>(7)?).unwrap_or_default(),
-                    ocr_text: row.get(8)?,
-                    created_at: row.get(9)?,
-                    file_size: row.get::<_, i64>(10)? as u64,
-                    notes: row.get(11).ok(),
-                    deleted_at: row.get(12).ok(),
+                    confidence: row.get(7).ok(),
+                    tags: serde_json::from_str(&row.get::<_, String>(8)?).unwrap_or_default(),
+                    ocr_text: row.get(9)?,
+                    created_at: row.get(10)?,
+                    file_size: row.get::<_, i64>(11)? as u64,
+                    notes: row.get(12).ok(),
+                    deleted_at: row.get(13).ok(),
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -281,7 +286,7 @@ impl Database {
 
     pub fn search_documents(&self, query: &str) -> Result<Vec<Document>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, original_name, new_name, file_path, document_type, category, subcategory, tags, ocr_text, created_at, file_size, notes, deleted_at
+            "SELECT id, original_name, new_name, file_path, document_type, category, subcategory, confidence, tags, ocr_text, created_at, file_size, notes, deleted_at
              FROM documents
              WHERE (ocr_text LIKE ?1 OR new_name LIKE ?1 OR tags LIKE ?1 OR notes LIKE ?1)
              AND deleted_at IS NULL
@@ -299,12 +304,13 @@ impl Database {
                     document_type: row.get(4)?,
                     category: row.get::<_, Option<String>>(5)?.unwrap_or_else(|| "Autre".to_string()),
                     subcategory: row.get(6).ok(),
-                    tags: serde_json::from_str(&row.get::<_, String>(7)?).unwrap_or_default(),
-                    ocr_text: row.get(8)?,
-                    created_at: row.get(9)?,
-                    file_size: row.get::<_, i64>(10)? as u64,
-                    notes: row.get(11).ok(),
-                    deleted_at: row.get(12).ok(),
+                    confidence: row.get(7).ok(),
+                    tags: serde_json::from_str(&row.get::<_, String>(8)?).unwrap_or_default(),
+                    ocr_text: row.get(9)?,
+                    created_at: row.get(10)?,
+                    file_size: row.get::<_, i64>(11)? as u64,
+                    notes: row.get(12).ok(),
+                    deleted_at: row.get(13).ok(),
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -325,7 +331,7 @@ impl Database {
     // Récupère les documents supprimés (corbeille)
     pub fn get_deleted_documents(&self) -> Result<Vec<Document>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, original_name, new_name, file_path, document_type, category, subcategory, tags, ocr_text, created_at, file_size, notes, deleted_at
+            "SELECT id, original_name, new_name, file_path, document_type, category, subcategory, confidence, tags, ocr_text, created_at, file_size, notes, deleted_at
              FROM documents WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC"
         )?;
 
@@ -339,12 +345,13 @@ impl Database {
                     document_type: row.get(4)?,
                     category: row.get::<_, Option<String>>(5)?.unwrap_or_else(|| "Autre".to_string()),
                     subcategory: row.get(6).ok(),
-                    tags: serde_json::from_str(&row.get::<_, String>(7)?).unwrap_or_default(),
-                    ocr_text: row.get(8)?,
-                    created_at: row.get(9)?,
-                    file_size: row.get::<_, i64>(10)? as u64,
-                    notes: row.get(11).ok(),
-                    deleted_at: row.get(12).ok(),
+                    confidence: row.get(7).ok(),
+                    tags: serde_json::from_str(&row.get::<_, String>(8)?).unwrap_or_default(),
+                    ocr_text: row.get(9)?,
+                    created_at: row.get(10)?,
+                    file_size: row.get::<_, i64>(11)? as u64,
+                    notes: row.get(12).ok(),
+                    deleted_at: row.get(13).ok(),
                 })
             })?
             .collect::<Result<Vec<_>>>()?;

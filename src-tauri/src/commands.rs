@@ -110,6 +110,7 @@ pub async fn process_file(
         document_type: doc_type.name,
         category: category_name,
         subcategory: classification.subcategory,
+        confidence: Some(classification.confidence),
         tags: all_tags,
         ocr_text,
         created_at: Local::now().to_rfc3339(),

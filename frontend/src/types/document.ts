@@ -6,6 +6,7 @@ export interface Document {
     document_type: string
     category: string              // NEW: Catégorie principale
     subcategory?: string | null   // NEW: Sous-catégorie
+    confidence?: number | null    // Score de confiance (0.0-1.0)
     tags: string[]
     ocr_text: string
     created_at: string
