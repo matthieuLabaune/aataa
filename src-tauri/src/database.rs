@@ -21,21 +21,25 @@ impl Database {
                 ocr_text TEXT,
                 created_at TEXT NOT NULL,
                 file_size INTEGER NOT NULL,
-                notes TEXT
+                notes TEXT,
+                deleted_at TEXT
             )",
             [],
         )?;
 
         // Add notes column if it doesn't exist (migration)
         let _ = conn.execute("ALTER TABLE documents ADD COLUMN notes TEXT", []);
+        
+        // Add deleted_at column if it doesn't exist (migration)
+        let _ = conn.execute("ALTER TABLE documents ADD COLUMN deleted_at TEXT", []);
 
         Ok(Database { conn })
     }
 
     pub fn insert_document(&self, doc: &Document) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO documents (id, original_name, new_name, file_path, document_type, tags, ocr_text, created_at, file_size, notes)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT INTO documents (id, original_name, new_name, file_path, document_type, tags, ocr_text, created_at, file_size, notes, deleted_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             rusqlite::params![
                 doc.id,
                 doc.original_name,
@@ -47,6 +51,7 @@ impl Database {
                 doc.created_at,
                 doc.file_size as i64,
                 doc.notes,
+                doc.deleted_at,
             ],
         )?;
         Ok(())
@@ -54,8 +59,8 @@ impl Database {
 
     pub fn get_all_documents(&self) -> Result<Vec<Document>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, original_name, new_name, file_path, document_type, tags, ocr_text, created_at, file_size, notes
-             FROM documents ORDER BY created_at DESC"
+            "SELECT id, original_name, new_name, file_path, document_type, tags, ocr_text, created_at, file_size, notes, deleted_at
+             FROM documents WHERE deleted_at IS NULL ORDER BY created_at DESC"
         )?;
 
         let documents = stmt.query_map([], |row| {
@@ -70,6 +75,7 @@ impl Database {
                 created_at: row.get(7)?,
                 file_size: row.get::<_, i64>(8)? as u64,
                 notes: row.get(9).ok(),
+                deleted_at: row.get(10).ok(),
             })
         })?
         .collect::<Result<Vec<_>>>()?;
@@ -79,9 +85,10 @@ impl Database {
 
     pub fn search_documents(&self, query: &str) -> Result<Vec<Document>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, original_name, new_name, file_path, document_type, tags, ocr_text, created_at, file_size, notes
+            "SELECT id, original_name, new_name, file_path, document_type, tags, ocr_text, created_at, file_size, notes, deleted_at
              FROM documents
-             WHERE ocr_text LIKE ?1 OR new_name LIKE ?1 OR tags LIKE ?1 OR notes LIKE ?1
+             WHERE (ocr_text LIKE ?1 OR new_name LIKE ?1 OR tags LIKE ?1 OR notes LIKE ?1)
+             AND deleted_at IS NULL
              ORDER BY created_at DESC"
         )?;
 
@@ -98,6 +105,7 @@ impl Database {
                 created_at: row.get(7)?,
                 file_size: row.get::<_, i64>(8)? as u64,
                 notes: row.get(9).ok(),
+                deleted_at: row.get(10).ok(),
             })
         })?
         .collect::<Result<Vec<_>>>()?;
@@ -105,7 +113,54 @@ impl Database {
         Ok(documents)
     }
 
+    // Soft delete: marque le document comme supprimé
     pub fn delete_document(&self, id: &str) -> Result<()> {
+        let deleted_at = chrono::Local::now().to_rfc3339();
+        self.conn.execute(
+            "UPDATE documents SET deleted_at = ?1 WHERE id = ?2",
+            rusqlite::params![deleted_at, id],
+        )?;
+        Ok(())
+    }
+
+    // Récupère les documents supprimés (corbeille)
+    pub fn get_deleted_documents(&self) -> Result<Vec<Document>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, original_name, new_name, file_path, document_type, tags, ocr_text, created_at, file_size, notes, deleted_at
+             FROM documents WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC"
+        )?;
+
+        let documents = stmt.query_map([], |row| {
+            Ok(Document {
+                id: row.get(0)?,
+                original_name: row.get(1)?,
+                new_name: row.get(2)?,
+                file_path: row.get(3)?,
+                document_type: row.get(4)?,
+                tags: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
+                ocr_text: row.get(6)?,
+                created_at: row.get(7)?,
+                file_size: row.get::<_, i64>(8)? as u64,
+                notes: row.get(9).ok(),
+                deleted_at: row.get(10).ok(),
+            })
+        })?
+        .collect::<Result<Vec<_>>>()?;
+
+        Ok(documents)
+    }
+
+    // Restaure un document supprimé
+    pub fn restore_document(&self, id: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE documents SET deleted_at = NULL WHERE id = ?1",
+            [id],
+        )?;
+        Ok(())
+    }
+
+    // Supprime définitivement un document (hard delete)
+    pub fn permanently_delete_document(&self, id: &str) -> Result<()> {
         self.conn.execute("DELETE FROM documents WHERE id = ?1", [id])?;
         Ok(())
     }

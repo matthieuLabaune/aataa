@@ -12,6 +12,7 @@ pub struct Document {
     pub created_at: String,
     pub file_size: u64,
     pub notes: Option<String>,
+    pub deleted_at: Option<String>, // NULL = actif, Date ISO = supprimé
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
