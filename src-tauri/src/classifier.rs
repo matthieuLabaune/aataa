@@ -183,8 +183,8 @@ impl Classifier {
     pub fn classify_detailed(&self, text: &str) -> ClassificationResult {
         let text_lower = text.to_lowercase();
         
-        // 1. Déterminer la catégorie principale
-        let category = self.detect_main_category(&text_lower);
+        // 1. Déterminer la catégorie principale et obtenir le score
+        let (category, score) = self.detect_main_category_with_score(&text_lower);
         
         // 2. Suggérer une sous-catégorie basée sur le contenu
         let subcategory = self.suggest_subcategory(&category, &text_lower);
@@ -192,11 +192,13 @@ impl Classifier {
         // 3. Extraire les tags automatiquement (avec métadonnées avancées)
         let suggested_tags = self.extract_tags(&text);
         
-        // 4. Calculer la confiance
-        let confidence = self.calculate_category_confidence(&category, &text_lower);
+        // 4. Calculer la confiance basée sur le score des mots-clés
+        // Score normalisé : on considère qu'un score de 3.0 = 75% de confiance
+        // et on plafonne à 100%
+        let confidence = (score / 4.0).min(1.0);
         
-        if confidence < 0.6 {
-            eprintln!("⚠️  Catégorie incertaine (score: {:.2}%) - Type 'Autre' utilisé", confidence * 100.0);
+        if confidence < 0.3 {
+            eprintln!("⚠️  Catégorie incertaine (score: {:.1}, confiance: {:.2}%) - Type 'Autre' utilisé", score, confidence * 100.0);
             return ClassificationResult {
                 category: MainCategory::Autre,
                 subcategory: None,
@@ -205,7 +207,7 @@ impl Classifier {
             };
         }
 
-        eprintln!("✓ Catégorie: {} (score: {:.2}%)", category.to_string(), confidence * 100.0);
+        eprintln!("✓ Catégorie finale: {} (score: {:.1}, confiance: {:.2}%)", category.to_string(), score, confidence * 100.0);
         if let Some(ref sub) = subcategory {
             eprintln!("  → Sous-catégorie suggérée: {}", sub);
         }
@@ -218,7 +220,7 @@ impl Classifier {
         }
     }
 
-    fn detect_main_category(&self, text: &str) -> MainCategory {
+    fn detect_main_category_with_score(&self, text: &str) -> (MainCategory, f32) {
         let text_lower = text.to_lowercase();
         
         // Charger les mots-clés depuis la base de données
@@ -227,12 +229,12 @@ impl Classifier {
                 Ok(kws) => kws,
                 Err(_) => {
                     eprintln!("⚠️  Erreur lors du chargement des mots-clés, utilisation des scores par défaut");
-                    return self.detect_main_category_fallback(&text_lower);
+                    return (self.detect_main_category_fallback(&text_lower), 0.0);
                 }
             },
             Err(_) => {
                 eprintln!("⚠️  Impossible de verrouiller la base de données");
-                return self.detect_main_category_fallback(&text_lower);
+                return (self.detect_main_category_fallback(&text_lower), 0.0);
             }
         };
 
@@ -269,14 +271,23 @@ impl Classifier {
             0.0
         );
         
+        let best_score = scores[0].1;
+        let best_category = scores[0].0.clone();
+        
         // Seuil minimum ajusté : au moins 1 mot-clé de poids normal (1.0)
-        if scores[0].1 >= 1.0 {
-            eprintln!("  ✅ Catégorie sélectionnée: {} (score: {:.1})", scores[0].0.to_string(), scores[0].1);
-            scores[0].0.clone()
+        if best_score >= 1.0 {
+            eprintln!("  ✅ Catégorie sélectionnée: {} (score: {:.1})", best_category.to_string(), best_score);
+            (best_category, best_score)
         } else {
-            eprintln!("  ⚠️  Score trop faible ({:.1} < 1.0) → Autre", scores[0].1);
-            MainCategory::Autre
+            eprintln!("  ⚠️  Score trop faible ({:.1} < 1.0) → Autre", best_score);
+            (MainCategory::Autre, best_score)
         }
+    }
+
+    #[allow(dead_code)]
+    fn detect_main_category(&self, text: &str) -> MainCategory {
+        let (category, _score) = self.detect_main_category_with_score(text);
+        category
     }
 
     // Méthode de fallback si la DB n'est pas accessible
@@ -338,19 +349,6 @@ impl Classifier {
     fn keyword_score(&self, text: &str, keywords: &[&str]) -> f32 {
         let matches = keywords.iter().filter(|k| text.contains(*k)).count();
         matches as f32 / keywords.len() as f32
-    }
-
-    fn calculate_category_confidence(&self, category: &MainCategory, text: &str) -> f32 {
-        match category {
-            MainCategory::Financier => self.score_financier(text),
-            MainCategory::Administratif => self.score_administratif(text),
-            MainCategory::Sante => self.score_sante(text),
-            MainCategory::Professionnel => self.score_professionnel(text),
-            MainCategory::Immobilier => self.score_immobilier(text),
-            MainCategory::Academique => self.score_academique(text),
-            MainCategory::Personnel => self.score_personnel(text),
-            MainCategory::Autre => 0.5,
-        }
     }
 
     fn suggest_subcategory(&self, category: &MainCategory, text: &str) -> Option<String> {
