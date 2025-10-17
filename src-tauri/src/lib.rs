@@ -31,12 +31,13 @@ pub fn run() {
             std::fs::create_dir_all(&app_dir)?;
             let db_path = app_dir.join("aataa.db");
             let db = Database::new(db_path).expect("Failed to initialize database");
+            let db_arc = std::sync::Arc::new(Mutex::new(db));
 
             // Initialize OCR engine
             let ocr = OcrEngine::new().expect("Failed to initialize OCR engine");
 
-            // Initialize classifier
-            let classifier = Classifier::new();
+            // Initialize classifier with database reference
+            let classifier = Classifier::new(db_arc.clone());
 
             // Set default archive path
             let archive_path = app_dir.join("archive");
@@ -44,7 +45,7 @@ pub fn run() {
 
             // Create app state
             let state = AppState {
-                db: Mutex::new(db),
+                db: db_arc,
                 ocr: Mutex::new(ocr),
                 classifier,
                 archive_path: Mutex::new(archive_path),
@@ -80,6 +81,11 @@ pub fn run() {
             commands::add_subcategory,
             commands::delete_subcategory,
             commands::get_all_tags,
+            // Classification keywords management
+            commands::get_classification_keywords,
+            commands::add_classification_keyword,
+            commands::update_classification_keyword,
+            commands::delete_classification_keyword,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

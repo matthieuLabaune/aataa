@@ -133,3 +133,13 @@ pub struct ClassificationResult {
     pub suggested_tags: Vec<String>,
     pub confidence: f32,
 }
+
+/// Mot-clé de classification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClassificationKeyword {
+    pub id: i64,
+    pub category: String,
+    pub subcategory: Option<String>,
+    pub keyword: String,
+    pub weight: f64,
+}

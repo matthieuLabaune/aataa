@@ -7,12 +7,12 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::process::Command;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::command;
 use uuid::Uuid;
 
 pub struct AppState {
-    pub db: Mutex<Database>,
+    pub db: Arc<Mutex<Database>>,
     pub ocr: Mutex<OcrEngine>,
     pub classifier: Classifier,
     pub archive_path: Mutex<PathBuf>,
@@ -587,4 +587,51 @@ pub async fn delete_subcategory(
 pub async fn get_all_tags(state: tauri::State<'_, AppState>) -> Result<Vec<crate::models::Tag>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db.get_all_tags().map_err(|e| e.to_string())
+}
+
+// ========== Classification Keywords Commands ==========
+
+#[command]
+pub async fn get_classification_keywords(
+    category: Option<String>,
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<crate::models::ClassificationKeyword>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.get_classification_keywords(category.as_deref())
+        .map_err(|e| e.to_string())
+}
+
+#[command]
+pub async fn add_classification_keyword(
+    category: String,
+    subcategory: Option<String>,
+    keyword: String,
+    weight: f64,
+    state: tauri::State<'_, AppState>,
+) -> Result<i64, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.add_classification_keyword(&category, subcategory.as_deref(), &keyword, weight)
+        .map_err(|e| e.to_string())
+}
+
+#[command]
+pub async fn update_classification_keyword(
+    id: i64,
+    keyword: String,
+    weight: f64,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.update_classification_keyword(id, &keyword, weight)
+        .map_err(|e| e.to_string())
+}
+
+#[command]
+pub async fn delete_classification_keyword(
+    id: i64,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.delete_classification_keyword(id)
+        .map_err(|e| e.to_string())
 }
