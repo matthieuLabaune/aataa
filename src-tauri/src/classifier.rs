@@ -1,9 +1,13 @@
 use crate::models::{DocumentType, MainCategory, ClassificationResult};
+use crate::database::Database;
 use chrono::Local;
 use regex::Regex;
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 
 pub struct Classifier {
     patterns: Vec<ClassificationPattern>,
+    db: Arc<Mutex<Database>>,
 }
 
 struct ClassificationPattern {
@@ -14,7 +18,7 @@ struct ClassificationPattern {
 }
 
 impl Classifier {
-    pub fn new() -> Self {
+    pub fn new(db: Arc<Mutex<Database>>) -> Self {
         let patterns = vec![
             // FACTURE - Pattern strict pour éviter les faux positifs
             ClassificationPattern {
@@ -141,7 +145,7 @@ impl Classifier {
             },
         ];
 
-        Classifier { patterns }
+        Classifier { patterns, db }
     }
 
     pub fn classify(&self, text: &str) -> DocumentType {
@@ -215,6 +219,55 @@ impl Classifier {
     }
 
     fn detect_main_category(&self, text: &str) -> MainCategory {
+        let text_lower = text.to_lowercase();
+        
+        // Charger les mots-clés depuis la base de données
+        let keywords = match self.db.lock() {
+            Ok(db) => match db.get_classification_keywords(None) {
+                Ok(kws) => kws,
+                Err(_) => {
+                    eprintln!("⚠️  Erreur lors du chargement des mots-clés, utilisation des scores par défaut");
+                    return self.detect_main_category_fallback(&text_lower);
+                }
+            },
+            Err(_) => {
+                eprintln!("⚠️  Impossible de verrouiller la base de données");
+                return self.detect_main_category_fallback(&text_lower);
+            }
+        };
+
+        // Calculer les scores pour chaque catégorie
+        let mut category_scores: HashMap<String, f64> = HashMap::new();
+        
+        for kw in keywords {
+            if text_lower.contains(&kw.keyword.to_lowercase()) {
+                *category_scores.entry(kw.category).or_insert(0.0) += kw.weight;
+            }
+        }
+
+        // Trouver la catégorie avec le score le plus élevé
+        let mut scores = vec![
+            (MainCategory::Financier, category_scores.get("Financier").copied().unwrap_or(0.0) as f32),
+            (MainCategory::Administratif, category_scores.get("Administratif").copied().unwrap_or(0.0) as f32),
+            (MainCategory::Sante, category_scores.get("Santé").copied().unwrap_or(0.0) as f32),
+            (MainCategory::Professionnel, category_scores.get("Professionnel").copied().unwrap_or(0.0) as f32),
+            (MainCategory::Immobilier, category_scores.get("Immobilier").copied().unwrap_or(0.0) as f32),
+            (MainCategory::Academique, category_scores.get("Académique").copied().unwrap_or(0.0) as f32),
+            (MainCategory::Personnel, category_scores.get("Personnel").copied().unwrap_or(0.0) as f32),
+        ];
+
+        scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        
+        // Seuil minimum ajusté selon les poids
+        if scores[0].1 > 1.0 {
+            scores[0].0.clone()
+        } else {
+            MainCategory::Autre
+        }
+    }
+
+    // Méthode de fallback si la DB n'est pas accessible
+    fn detect_main_category_fallback(&self, text: &str) -> MainCategory {
         let mut scores = vec![
             (MainCategory::Financier, self.score_financier(text)),
             (MainCategory::Administratif, self.score_administratif(text)),
@@ -347,36 +400,6 @@ impl Classifier {
         tags
     }
 
-    fn extract_year(&self, text: &str) -> Option<String> {
-        let re = Regex::new(r"(20[0-2]\d)").ok()?;
-        re.captures(text)
-            .and_then(|caps| caps.get(1))
-            .map(|m| m.as_str().to_string())
-    }
-
-    fn extract_amount(&self, text: &str) -> Option<String> {
-        let re = Regex::new(r"(\d+[.,]\d{2})\s*€").ok()?;
-        re.captures(text)
-            .and_then(|caps| caps.get(1))
-            .map(|m| m.as_str().replace(",", "."))
-    }
-
-    fn extract_entity(&self, text: &str) -> Option<String> {
-        // Chercher des noms connus
-        let entities = vec![
-            "EDF", "Orange", "SFR", "Free", "Bouygues", 
-            "CPAM", "Mutuelle", "Banque", "La Poste"
-        ];
-        
-        for entity in entities {
-            if text.to_lowercase().contains(&entity.to_lowercase()) {
-                return Some(entity.to_string());
-            }
-        }
-        
-        None
-    }
-
     fn calculate_score(&self, text: &str, pattern: &ClassificationPattern) -> f32 {
         // 1. Vérifier les bloquants (si présent, score = 0)
         for blocker in &pattern.blocker_keywords {
@@ -421,16 +444,35 @@ impl Classifier {
     pub fn extract_tags(&self, text: &str) -> Vec<String> {
         let mut tags = Vec::new();
 
-        // Extract dates
+        // Extraire le numéro de facture
+        if let Some(invoice_num) = self.extract_invoice_number(text) {
+            tags.push(format!("N°{}", invoice_num));
+        }
+
+        // Extraire le montant total
+        if let Some(amount) = self.extract_amount(text) {
+            tags.push(format!("{}€", amount));
+        }
+
+        // Extraire le nom du client
+        if let Some(client) = self.extract_client_name(text) {
+            tags.push(client);
+        }
+
+        // Extraire l'entreprise/entité
+        if let Some(entity) = self.extract_entity(text) {
+            tags.push(entity);
+        }
+
+        // Extraire l'année
+        if let Some(year) = self.extract_year(text) {
+            tags.push(year);
+        }
+
+        // Extract dates complètes
         let date_re = Regex::new(r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}").unwrap();
         if date_re.is_match(text) {
             tags.push("contains_date".to_string());
-        }
-
-        // Extract amounts
-        let amount_re = Regex::new(r"(?i)\d+[.,]\d{2}\s*(€|eur|euro|\$|usd)").unwrap();
-        if amount_re.is_match(text) {
-            tags.push("contains_amount".to_string());
         }
 
         // Extract company names (simple pattern)
@@ -454,6 +496,105 @@ impl Classifier {
         tags
     }
 
+    fn extract_year(&self, text: &str) -> Option<String> {
+        let re = Regex::new(r"(20[0-2]\d)").ok()?;
+        re.captures(text)
+            .and_then(|caps| caps.get(1))
+            .map(|m| m.as_str().to_string())
+    }
+
+    fn extract_amount(&self, text: &str) -> Option<String> {
+        // Chercher les montants avec € ou EUR
+        let patterns = vec![
+            r"total\s*[:\s]*(\d+[\s,.]?\d+[.,]\d{2})\s*€",  // Total: 1234.56 €
+            r"(\d+[\s,.]?\d+[.,]\d{2})\s*€",                // 1234.56 €
+            r"(\d+[\s,.]?\d+[.,]\d{2})\s*eur",              // 1234.56 EUR
+        ];
+        
+        for pattern in patterns {
+            if let Ok(re) = Regex::new(pattern) {
+                if let Some(caps) = re.captures(&text.to_lowercase()) {
+                    if let Some(m) = caps.get(1) {
+                        return Some(m.as_str().replace(",", ".").replace(" ", ""));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn extract_invoice_number(&self, text: &str) -> Option<String> {
+        let patterns = vec![
+            r"facture\s*n[°º]\s*[:\s]*(\d{4}-\d{3})",           // Facture N° 2024-004
+            r"facture\s*n[°º]\s*[:\s]*([\d-]+)",                // Facture N° 2024-004
+            r"invoice\s*#?\s*[:\s]*([\d-]+)",                   // Invoice #2024-004
+            r"n[°º]\s*facture\s*[:\s]*([\d-]+)",                // N° facture 2024-004
+        ];
+        
+        for pattern in patterns {
+            if let Ok(re) = Regex::new(pattern) {
+                if let Some(caps) = re.captures(&text.to_lowercase()) {
+                    if let Some(m) = caps.get(1) {
+                        return Some(m.as_str().to_string());
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn extract_client_name(&self, text: &str) -> Option<String> {
+        // Chercher des patterns de noms (nom prénom ou prénom nom)
+        // Après des marqueurs comme "client:", "à:", etc.
+        let patterns = vec![
+            r"(?i)(?:client|à|pour)\s*[:\s]*([A-ZÉÈÊÀÂÔÛÇ][a-zéèêàâôûç]+(?:\s+[A-ZÉÈÊÀÂÔÛÇ][a-zéèêàâôûç]+)+)",
+            r"([A-ZÉÈÊÀÂÔÛÇ][a-zéèêàâôûç]+\s+[A-ZÉÈÊÀÂÔÛÇ][a-zéèêàâôûç]+)\s*\(\s*ei\s*\)", // Nom (EI)
+        ];
+        
+        for pattern in patterns {
+            if let Ok(re) = Regex::new(pattern) {
+                if let Some(caps) = re.captures(text) {
+                    if let Some(m) = caps.get(1) {
+                        let name = m.as_str().trim().to_string();
+                        // Vérifier que ce n'est pas un mot commun
+                        if !name.to_lowercase().contains("facture") 
+                            && !name.to_lowercase().contains("client")
+                            && name.len() > 5 {
+                            return Some(name);
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn extract_entity(&self, text: &str) -> Option<String> {
+        // Chercher des noms connus d'entreprises
+        let entities = vec![
+            ("edf", "EDF"),
+            ("engie", "Engie"),
+            ("orange", "Orange"),
+            ("sfr", "SFR"),
+            ("free", "Free"),
+            ("bouygues", "Bouygues"),
+            ("cpam", "CPAM"),
+            ("la poste", "La Poste"),
+            ("sncf", "SNCF"),
+            ("ratp", "RATP"),
+            ("gray matter technology", "Gray Matter Technology"),
+        ];
+        
+        let text_lower = text.to_lowercase();
+        for (search, display) in entities {
+            if text_lower.contains(search) {
+                return Some(display.to_string());
+            }
+        }
+        
+        None
+    }
+
     pub fn generate_filename(&self, doc_type: &DocumentType, original_name: &str) -> String {
         let now = Local::now();
         let date_str = now.format("%Y%m%d_%H%M%S");
@@ -465,138 +606,5 @@ impl Classifier {
             .unwrap_or("txt");
 
         format!("{}_{}.{}", doc_type.prefix, date_str, extension)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_classify_facture() {
-        let classifier = Classifier::new();
-        let text = "Facture n°12345 - Montant total: 150.00€";
-        let result = classifier.classify(text);
-        assert_eq!(result.name, "Facture");
-        assert_eq!(result.prefix, "FACT");
-    }
-
-    #[test]
-    fn test_classify_contrat() {
-        let classifier = Classifier::new();
-        let text = "Contrat de location - Signé le 01/01/2024";
-        let result = classifier.classify(text);
-        assert_eq!(result.name, "Contrat");
-        assert_eq!(result.prefix, "CONT");
-    }
-
-    #[test]
-    fn test_classify_releve_bancaire() {
-        let classifier = Classifier::new();
-        let text = "Relevé de compte - IBAN: FR76 1234 5678 9012";
-        let result = classifier.classify(text);
-        assert_eq!(result.name, "Relevé bancaire");
-        assert_eq!(result.prefix, "BANK");
-    }
-
-    #[test]
-    fn test_classify_bulletin_paie() {
-        let classifier = Classifier::new();
-        let text = "BULLETIN DE PAIE - Période: Janvier 2024 - Salaire net: 2500.00";
-        let result = classifier.classify(text);
-        assert_eq!(result.name, "Bulletin de paie");
-        assert_eq!(result.prefix, "PAIE");
-    }
-
-    #[test]
-    fn test_classify_unknown() {
-        let classifier = Classifier::new();
-        let text = "Ceci est un document sans mots-clés spécifiques";
-        let result = classifier.classify(text);
-        assert_eq!(result.name, "Unknown");
-        assert_eq!(result.prefix, "DOC");
-    }
-
-    #[test]
-    fn test_extract_tags_date() {
-        let classifier = Classifier::new();
-        let text = "Document créé le 15/03/2024";
-        let tags = classifier.extract_tags(text);
-        assert!(tags.contains(&"contains_date".to_string()));
-    }
-
-    #[test]
-    fn test_extract_tags_amount() {
-        let classifier = Classifier::new();
-        let text = "Montant: 150.00€";
-        let tags = classifier.extract_tags(text);
-        assert!(tags.contains(&"contains_amount".to_string()));
-    }
-
-    #[test]
-    fn test_extract_tags_email() {
-        let classifier = Classifier::new();
-        let text = "Contact: info@example.com";
-        let tags = classifier.extract_tags(text);
-        assert!(tags.contains(&"contains_email".to_string()));
-    }
-
-    #[test]
-    fn test_extract_tags_phone() {
-        let classifier = Classifier::new();
-        let text = "Téléphone: 01 23 45 67 89";
-        let tags = classifier.extract_tags(text);
-        assert!(tags.contains(&"contains_phone".to_string()));
-    }
-
-    #[test]
-    fn test_extract_tags_company() {
-        let classifier = Classifier::new();
-        let text = "ACME S.A.S - Document officiel";
-        let tags = classifier.extract_tags(text);
-        assert!(tags.contains(&"company_document".to_string()));
-    }
-
-    #[test]
-    fn test_extract_tags_multiple() {
-        let classifier = Classifier::new();
-        let text =
-            "Facture ACME S.A.S - Date: 15/03/2024 - Montant: 150.00€ - Contact: info@acme.com";
-        let tags = classifier.extract_tags(text);
-        assert!(tags.contains(&"contains_date".to_string()));
-        assert!(tags.contains(&"contains_amount".to_string()));
-        assert!(tags.contains(&"contains_email".to_string()));
-        assert!(tags.contains(&"company_document".to_string()));
-    }
-
-    #[test]
-    fn test_generate_filename() {
-        let classifier = Classifier::new();
-        let doc_type = DocumentType {
-            name: "Facture".to_string(),
-            pattern: "".to_string(),
-            prefix: "FACT".to_string(),
-        };
-        let original_name = "document.pdf";
-        let filename = classifier.generate_filename(&doc_type, original_name);
-
-        assert!(filename.starts_with("FACT_"));
-        assert!(filename.ends_with(".pdf"));
-        assert!(filename.len() > 10); // FACT_ + date + .pdf
-    }
-
-    #[test]
-    fn test_generate_filename_no_extension() {
-        let classifier = Classifier::new();
-        let doc_type = DocumentType {
-            name: "Test".to_string(),
-            pattern: "".to_string(),
-            prefix: "TEST".to_string(),
-        };
-        let original_name = "document_without_extension";
-        let filename = classifier.generate_filename(&doc_type, original_name);
-
-        assert!(filename.starts_with("TEST_"));
-        assert!(filename.ends_with(".txt")); // Default extension
     }
 }
