@@ -3,41 +3,156 @@ use chrono::Local;
 use crate::models::DocumentType;
 
 pub struct Classifier {
-    patterns: Vec<DocumentType>,
+    patterns: Vec<ClassificationPattern>,
+}
+
+struct ClassificationPattern {
+    doc_type: DocumentType,
+    required_keywords: Vec<String>,
+    support_keywords: Vec<String>,
+    blocker_keywords: Vec<String>,
 }
 
 impl Classifier {
     pub fn new() -> Self {
         let patterns = vec![
-            DocumentType {
-                name: "Facture".to_string(),
-                pattern: r"(?i)(facture|invoice|bill|montant|total|€|\$)".to_string(),
-                prefix: "FACT".to_string(),
+            // FACTURE - Pattern strict pour éviter les faux positifs
+            ClassificationPattern {
+                doc_type: DocumentType {
+                    name: "Facture".to_string(),
+                    pattern: String::new(),
+                    prefix: "FACT".to_string(),
+                },
+                required_keywords: vec![
+                    "facture".to_string(),
+                    "invoice".to_string(),
+                ],
+                support_keywords: vec![
+                    "montant".to_string(),
+                    "total".to_string(),
+                    "tva".to_string(),
+                    "€".to_string(),
+                    "ht".to_string(),
+                    "ttc".to_string(),
+                    "payer".to_string(),
+                    "échéance".to_string(),
+                ],
+                blocker_keywords: vec![
+                    "contrat".to_string(),
+                    "bulletin".to_string(),
+                    "relevé".to_string(),
+                    "attestation".to_string(),
+                ],
             },
-            DocumentType {
-                name: "Contrat".to_string(),
-                pattern: r"(?i)(contrat|contract|agreement|accord|signé|signature)".to_string(),
-                prefix: "CONT".to_string(),
+            // CONTRAT
+            ClassificationPattern {
+                doc_type: DocumentType {
+                    name: "Contrat".to_string(),
+                    pattern: String::new(),
+                    prefix: "CONT".to_string(),
+                },
+                required_keywords: vec![
+                    "contrat".to_string(),
+                    "contract".to_string(),
+                ],
+                support_keywords: vec![
+                    "signataire".to_string(),
+                    "signature".to_string(),
+                    "clause".to_string(),
+                    "article".to_string(),
+                    "durée".to_string(),
+                    "résiliation".to_string(),
+                    "accord".to_string(),
+                ],
+                blocker_keywords: vec![
+                    "facture".to_string(),
+                ],
             },
-            DocumentType {
-                name: "Relevé bancaire".to_string(),
-                pattern: r"(?i)(relevé|bank\s+statement|compte|iban|solde|crédit|débit)".to_string(),
-                prefix: "BANK".to_string(),
+            // RELEVÉ BANCAIRE
+            ClassificationPattern {
+                doc_type: DocumentType {
+                    name: "Relevé bancaire".to_string(),
+                    pattern: String::new(),
+                    prefix: "BANK".to_string(),
+                },
+                required_keywords: vec![
+                    "relevé".to_string(),
+                    "statement".to_string(),
+                ],
+                support_keywords: vec![
+                    "compte".to_string(),
+                    "iban".to_string(),
+                    "solde".to_string(),
+                    "crédit".to_string(),
+                    "débit".to_string(),
+                    "opération".to_string(),
+                ],
+                blocker_keywords: vec![],
             },
-            DocumentType {
-                name: "Bulletin de paie".to_string(),
-                pattern: r"(?i)(bulletin\s+de\s+paie|salaire|payslip|net\s+à\s+payer|cotisation)".to_string(),
-                prefix: "PAIE".to_string(),
+            // BULLETIN DE PAIE
+            ClassificationPattern {
+                doc_type: DocumentType {
+                    name: "Bulletin de paie".to_string(),
+                    pattern: String::new(),
+                    prefix: "PAIE".to_string(),
+                },
+                required_keywords: vec![
+                    "bulletin".to_string(),
+                    "paie".to_string(),
+                    "salaire".to_string(),
+                ],
+                support_keywords: vec![
+                    "payslip".to_string(),
+                    "net à payer".to_string(),
+                    "cotisation".to_string(),
+                    "urssaf".to_string(),
+                    "employeur".to_string(),
+                ],
+                blocker_keywords: vec![
+                    "facture".to_string(),
+                ],
             },
-            DocumentType {
-                name: "Document officiel".to_string(),
-                pattern: r"(?i)(carte\s+identité|passeport|attestation|certificat|permis)".to_string(),
-                prefix: "OFFI".to_string(),
+            // DOCUMENT OFFICIEL
+            ClassificationPattern {
+                doc_type: DocumentType {
+                    name: "Document officiel".to_string(),
+                    pattern: String::new(),
+                    prefix: "OFFI".to_string(),
+                },
+                required_keywords: vec![
+                    "attestation".to_string(),
+                    "certificat".to_string(),
+                    "carte".to_string(),
+                    "passeport".to_string(),
+                ],
+                support_keywords: vec![
+                    "identité".to_string(),
+                    "officiel".to_string(),
+                    "permis".to_string(),
+                    "république".to_string(),
+                ],
+                blocker_keywords: vec![],
             },
-            DocumentType {
-                name: "Reçu".to_string(),
-                pattern: r"(?i)(reçu|receipt|ticket|caisse)".to_string(),
-                prefix: "RECU".to_string(),
+            // REÇU
+            ClassificationPattern {
+                doc_type: DocumentType {
+                    name: "Reçu".to_string(),
+                    pattern: String::new(),
+                    prefix: "RECU".to_string(),
+                },
+                required_keywords: vec![
+                    "reçu".to_string(),
+                    "receipt".to_string(),
+                    "ticket".to_string(),
+                ],
+                support_keywords: vec![
+                    "caisse".to_string(),
+                    "merci".to_string(),
+                    "thank you".to_string(),
+                ],
+                blocker_keywords: vec![
+                    "facture".to_string(),
+                ],
             },
         ];
 
@@ -45,15 +160,64 @@ impl Classifier {
     }
 
     pub fn classify(&self, text: &str) -> DocumentType {
+        let text_lower = text.to_lowercase();
+        let mut best_score = 0.0f32;
+        let mut best_type = DocumentType::default();
+
         for pattern in &self.patterns {
-            if let Ok(re) = Regex::new(&pattern.pattern) {
-                if re.is_match(text) {
-                    return pattern.clone();
-                }
+            let score = self.calculate_score(&text_lower, pattern);
+            
+            if score > best_score {
+                best_score = score;
+                best_type = pattern.doc_type.clone();
             }
         }
 
-        DocumentType::default()
+        // Seuil minimum de confiance : 60%
+        if best_score < 0.6 {
+            eprintln!("⚠️  Classification incertaine (score: {:.2}%) - Type par défaut utilisé", best_score * 100.0);
+            return DocumentType::default();
+        }
+
+        eprintln!("✓ Classification: {} (score: {:.2}%)", best_type.name, best_score * 100.0);
+        best_type
+    }
+
+    fn calculate_score(&self, text: &str, pattern: &ClassificationPattern) -> f32 {
+        // 1. Vérifier les bloquants (si présent, score = 0)
+        for blocker in &pattern.blocker_keywords {
+            if text.contains(blocker) {
+                return 0.0;
+            }
+        }
+
+        // 2. Compter les mots requis (au moins 1 doit être présent)
+        let required_count = pattern.required_keywords.iter()
+            .filter(|word| text.contains(word.as_str()))
+            .count();
+
+        if required_count == 0 {
+            return 0.0;
+        }
+
+        // 3. Score de base selon les mots requis (70% du score)
+        let required_score = required_count as f32 / pattern.required_keywords.len() as f32;
+
+        // 4. Bonus pour les mots de support (30% du score)
+        let support_count = pattern.support_keywords.iter()
+            .filter(|word| text.contains(word.as_str()))
+            .count();
+        
+        let support_score = if !pattern.support_keywords.is_empty() {
+            support_count as f32 / pattern.support_keywords.len() as f32
+        } else {
+            0.0
+        };
+
+        // 5. Score final (70% requis + 30% support)
+        let final_score = (required_score * 0.7) + (support_score * 0.3);
+
+        final_score.min(1.0)
     }
 
     pub fn extract_tags(&self, text: &str) -> Vec<String> {
