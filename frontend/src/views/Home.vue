@@ -272,6 +272,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
+import { useProcessingState } from '../../../composables/useProcessingState'
 import type { Document, DocumentStats } from '../types/document'
 
 const documents = ref<Document[]>([])
@@ -390,11 +391,61 @@ async function scanFolder() {
     })
 
     if (selected) {
-      await invoke('scan_folder', { folderPath: selected })
+      // 1. Scanner le dossier pour obtenir la liste des fichiers
+      const files = await invoke<string[]>('scan_folder', { folderPath: selected })
+      
+      if (files.length === 0) {
+        alert('Aucun fichier supporté trouvé dans ce dossier')
+        return
+      }
+
+      // 2. Confirmer le traitement
+      if (!confirm(`${files.length} fichier(s) trouvé(s). Voulez-vous les traiter tous ?`)) {
+        return
+      }
+
+      // 3. Importer avec l'indicateur de progression
+      const { startProcessing, updateProgress, completeProcessing } = useProcessingState()
+      const folderId = `folder_${Date.now()}`
+      startProcessing(folderId, `Dossier (${files.length} fichiers)`, 'folder')
+
+      let processed = 0
+      let errors = 0
+
+      for (const filePath of files) {
+        try {
+          const fileName = filePath.split('/').pop() || filePath
+          console.log(`Traitement: ${fileName}`)
+          
+          await invoke('process_file', { filePath })
+          processed++
+          
+          // Mettre à jour la progression
+          const progress = (processed / files.length) * 100
+          updateProgress(folderId, progress)
+          
+        } catch (error) {
+          console.error(`Erreur traitement ${filePath}:`, error)
+          errors++
+        }
+      }
+
+      // 4. Finaliser
+      completeProcessing(folderId)
+      
+      // 5. Recharger les documents
       await loadDocuments()
+
+      // 6. Afficher le résumé
+      if (errors > 0) {
+        alert(`Traitement terminé: ${processed} succès, ${errors} erreur(s)`)
+      } else {
+        alert(`${processed} fichier(s) traité(s) avec succès !`)
+      }
     }
   } catch (error) {
     console.error('Failed to scan folder:', error)
+    alert(`Erreur lors du scan du dossier: ${error}`)
   }
 }
 
