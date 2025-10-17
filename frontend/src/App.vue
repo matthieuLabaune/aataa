@@ -1,5 +1,8 @@
 <template>
   <div id="app" class="app-container">
+    <!-- Indicateur de traitement global -->
+    <ProcessingIndicator />
+    
     <NavigationRail v-if="!isMobile" />
     <main class="main-content">
       <router-view />
@@ -12,6 +15,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import NavigationRail from './components/NavigationRail.vue';
 import BottomNavigation from './components/BottomNavigation.vue';
+import ProcessingIndicator from './components/ProcessingIndicator.vue';
 
 const isMobile = ref(false);
 

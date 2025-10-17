@@ -272,7 +272,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
-import { useProcessingState } from '../../../composables/useProcessingState'
+import { useProcessingState } from '../composables/useProcessingState'
 import type { Document, DocumentStats } from '../types/document'
 
 const documents = ref<Document[]>([])
