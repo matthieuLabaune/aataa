@@ -1,5 +1,8 @@
 <template>
   <div style="min-height: 100vh;">
+    <!-- Indicateur de traitement -->
+    <ProcessingIndicator />
+
     <!-- Message de statut flottant -->
     <div
       v-if="showStatus"
@@ -489,6 +492,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import DocumentCard from '../components/DocumentCard.vue'
 import EmptyState from '../components/EmptyState.vue'
+import ProcessingIndicator from '../components/ProcessingIndicator.vue'
 
 interface Document {
   id: string
