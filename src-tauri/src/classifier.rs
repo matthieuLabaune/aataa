@@ -189,8 +189,8 @@ impl Classifier {
         // 2. Suggérer une sous-catégorie basée sur le contenu
         let subcategory = self.suggest_subcategory(&category, &text_lower);
         
-        // 3. Extraire les tags automatiquement
-        let suggested_tags = self.extract_smart_tags(&text_lower);
+        // 3. Extraire les tags automatiquement (avec métadonnées avancées)
+        let suggested_tags = self.extract_tags(&text);
         
         // 4. Calculer la confiance
         let confidence = self.calculate_category_confidence(&category, &text_lower);
@@ -241,7 +241,11 @@ impl Classifier {
         
         for kw in keywords {
             if text_lower.contains(&kw.keyword.to_lowercase()) {
-                *category_scores.entry(kw.category).or_insert(0.0) += kw.weight;
+                let category = kw.category.clone();
+                let keyword = kw.keyword.clone();
+                let weight = kw.weight;
+                *category_scores.entry(category.clone()).or_insert(0.0) += weight;
+                eprintln!("  ✓ Mot-clé trouvé: '{}' → {} (+{:.1})", keyword, category, weight);
             }
         }
 
@@ -258,10 +262,19 @@ impl Classifier {
 
         scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
         
-        // Seuil minimum ajusté selon les poids
-        if scores[0].1 > 1.0 {
+        eprintln!("  📊 Scores: Financier={:.1}, Administratif={:.1}, Santé={:.1}, Autre={:.1}", 
+            scores.iter().find(|(c, _)| matches!(c, MainCategory::Financier)).map(|(_, s)| s).unwrap_or(&0.0),
+            scores.iter().find(|(c, _)| matches!(c, MainCategory::Administratif)).map(|(_, s)| s).unwrap_or(&0.0),
+            scores.iter().find(|(c, _)| matches!(c, MainCategory::Sante)).map(|(_, s)| s).unwrap_or(&0.0),
+            0.0
+        );
+        
+        // Seuil minimum ajusté : au moins 1 mot-clé de poids normal (1.0)
+        if scores[0].1 >= 1.0 {
+            eprintln!("  ✅ Catégorie sélectionnée: {} (score: {:.1})", scores[0].0.to_string(), scores[0].1);
             scores[0].0.clone()
         } else {
+            eprintln!("  ⚠️  Score trop faible ({:.1} < 1.0) → Autre", scores[0].1);
             MainCategory::Autre
         }
     }
@@ -377,27 +390,6 @@ impl Classifier {
             },
             _ => None,
         }
-    }
-
-    fn extract_smart_tags(&self, text: &str) -> Vec<String> {
-        let mut tags = Vec::new();
-
-        // Extraire l'année
-        if let Some(year) = self.extract_year(text) {
-            tags.push(year);
-        }
-
-        // Extraire le montant
-        if let Some(amount) = self.extract_amount(text) {
-            tags.push(format!("{}€", amount));
-        }
-
-        // Extraire entité (société, organisme)
-        if let Some(entity) = self.extract_entity(text) {
-            tags.push(entity);
-        }
-
-        tags
     }
 
     fn calculate_score(&self, text: &str, pattern: &ClassificationPattern) -> f32 {

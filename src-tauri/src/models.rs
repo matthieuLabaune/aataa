@@ -63,6 +63,7 @@ impl MainCategory {
         }
     }
 
+    #[allow(dead_code)]
     pub fn prefix(&self) -> &str {
         match self {
             MainCategory::Administratif => "ADM",
@@ -76,6 +77,7 @@ impl MainCategory {
         }
     }
 
+    #[allow(dead_code)]
     pub fn icon(&self) -> &str {
         match self {
             MainCategory::Administratif => "description",
