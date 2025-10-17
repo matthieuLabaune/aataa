@@ -1,10 +1,9 @@
 <template>
   <nav class="navigation-rail">
     <div class="rail-header">
-      <div class="app-logo">
+      <button class="app-logo" @click="showAbout = true" title="À propos de PaperVault">
         <span class="material-icons logo-icon">lock</span>
-      </div>
-      <span class="app-name body-small">PaperVault</span>
+      </button>
     </div>
 
     <div class="rail-destinations">
@@ -45,6 +44,64 @@
         <span class="material-icons">settings</span>
       </router-link>
     </div>
+
+    <!-- About Modal -->
+    <div v-if="showAbout" class="md-modal-overlay" @click="showAbout = false">
+      <div class="md-modal about-modal animate-scale-in" @click.stop>
+        <div class="md-modal-header">
+          <div class="about-header">
+            <span class="material-icons about-icon">lock</span>
+            <h2 class="title-large">PaperVault</h2>
+          </div>
+          <button @click="showAbout = false" class="md-icon-button">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+
+        <div class="md-modal-content about-content">
+          <div class="about-section">
+            <p class="body-large about-tagline">Coffre-fort documentaire intelligent</p>
+          </div>
+
+          <div class="about-info-grid">
+            <div class="info-item">
+              <span class="label-medium">Version</span>
+              <span class="body-large">1.0.0</span>
+            </div>
+            <div class="info-item">
+              <span class="label-medium">Éditeur</span>
+              <span class="body-large">-</span>
+            </div>
+            <div class="info-item">
+              <span class="label-medium">Licence</span>
+              <span class="body-large">Gratuite</span>
+            </div>
+            <div class="info-item">
+              <span class="label-medium">Numéro client</span>
+              <span class="body-large">-</span>
+            </div>
+            <div class="info-item">
+              <span class="label-medium">Numéro de série</span>
+              <span class="body-large">-</span>
+            </div>
+            <div class="info-item">
+              <span class="label-medium">Type</span>
+              <span class="body-large">Version gratuite</span>
+            </div>
+          </div>
+
+          <div class="about-section">
+            <p class="body-small about-copyright">© 2025 PaperVault. Tous droits réservés.</p>
+          </div>
+        </div>
+
+        <div class="md-modal-footer">
+          <button @click="showAbout = false" class="md-filled-button">
+            Fermer
+          </button>
+        </div>
+      </div>
+    </div>
   </nav>
 </template>
 
@@ -53,6 +110,7 @@ import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 
 const deletedCount = ref(0);
+const showAbout = ref(false);
 
 const loadDeletedCount = async () => {
   try {
@@ -210,5 +268,70 @@ onMounted(() => {
 
 .rail-footer {
   padding: var(--md-sys-spacing-md) 0;
+}
+
+/* About Modal */
+.about-modal {
+  max-width: 500px;
+  width: 90%;
+}
+
+.about-header {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-md);
+}
+
+.about-icon {
+  font-size: 32px;
+  color: var(--md-sys-color-primary);
+}
+
+.about-content {
+  padding: var(--md-sys-spacing-xl) var(--md-sys-spacing-lg);
+}
+
+.about-section {
+  text-align: center;
+  margin-bottom: var(--md-sys-spacing-lg);
+}
+
+.about-tagline {
+  color: var(--md-sys-color-on-surface-variant);
+  margin: 0;
+}
+
+.about-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--md-sys-spacing-lg);
+  margin: var(--md-sys-spacing-xl) 0;
+  padding: var(--md-sys-spacing-lg);
+  background-color: var(--md-sys-color-surface-container);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-spacing-xs);
+}
+
+.info-item .label-medium {
+  color: var(--md-sys-color-on-surface-variant);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.info-item .body-large {
+  color: var(--md-sys-color-on-surface);
+  font-weight: 500;
+}
+
+.about-copyright {
+  color: var(--md-sys-color-on-surface-variant);
+  margin: 0;
+  opacity: 0.7;
 }
 </style>

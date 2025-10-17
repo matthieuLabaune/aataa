@@ -58,7 +58,8 @@
     </div>
 
     <!-- Message d'erreur -->
-    <div v-if="error" class="error-message">
+    <div v-if="error" class="error-message animate-fade-in">
+      <span class="material-icons">error</span>
       {{ error }}
     </div>
   </div>
@@ -112,12 +113,31 @@ function cancelAdding() {
 }
 
 async function handleAdd(category: MainCategory) {
-  if (!newSubcategoryName.value.trim()) return
+  const trimmedName = newSubcategoryName.value.trim()
+  if (!trimmedName) return
+
+  // Vérifier si la sous-catégorie existe déjà
+  const existing = getSubcategoriesFor(category).find(
+    sub => sub.name.toLowerCase() === trimmedName.toLowerCase()
+  )
+  
+  if (existing) {
+    error.value = `La sous-catégorie "${trimmedName}" existe déjà dans ${category}`
+    setTimeout(() => error.value = null, 3000)
+    return
+  }
 
   try {
-    await addSubcategory(category, newSubcategoryName.value.trim())
+    await addSubcategory(category, trimmedName)
     cancelAdding()
   } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : String(e)
+    if (errorMessage.includes('UNIQUE constraint')) {
+      error.value = `La sous-catégorie "${trimmedName}" existe déjà`
+    } else {
+      error.value = `Erreur: ${errorMessage}`
+    }
+    setTimeout(() => error.value = null, 5000)
     console.error('Erreur lors de l\'ajout:', e)
   }
 }
@@ -301,10 +321,21 @@ async function handleDelete(sub: Subcategory) {
 }
 
 .error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 12px 16px;
   background: var(--md-sys-color-error-container);
   border-radius: 8px;
+  border-left: 4px solid var(--md-sys-color-error);
   color: var(--md-sys-color-on-error-container);
   font-size: 14px;
+  font-weight: 500;
+  box-shadow: var(--md-sys-elevation-level2);
+}
+
+.error-message .material-icons {
+  color: var(--md-sys-color-error);
+  font-size: 20px;
 }
 </style>

@@ -733,13 +733,27 @@ onMounted(() => {
 
 .md-select-compact {
   padding: var(--md-sys-spacing-sm) var(--md-sys-spacing-md);
-  border: 1px solid var(--md-sys-color-outline);
-  border-radius: var(--md-sys-shape-corner-small);
-  background-color: var(--md-sys-color-surface);
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-highest);
   color: var(--md-sys-color-on-surface);
-  font-family: var(--md-sys-typescale-body-medium-font);
-  font-size: var(--md-sys-typescale-body-medium-size);
+  font-family: var(--md-sys-typescale-body-medium-font-family);
+  font-size: var(--md-sys-typescale-body-medium-font-size);
+  font-weight: 500;
   cursor: pointer;
+  transition: all var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
+  box-shadow: var(--md-sys-elevation-level1);
+}
+
+.md-select-compact:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, var(--md-sys-color-surface-container-highest));
+  box-shadow: var(--md-sys-elevation-level2);
+}
+
+.md-select-compact:focus {
+  outline: none;
+  background-color: var(--md-sys-color-surface-container-highest);
+  box-shadow: var(--md-sys-elevation-level2);
 }
 
 /* Filters Panel */
@@ -761,6 +775,40 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--md-sys-spacing-xs);
+}
+
+.filter-group label {
+  color: var(--md-sys-color-on-surface-variant);
+  font-weight: 500;
+}
+
+.filter-group .md-select {
+  padding: var(--md-sys-spacing-md);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-body-large-font-family);
+  font-size: var(--md-sys-typescale-body-large-font-size);
+  cursor: pointer;
+  transition: all var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
+}
+
+.filter-group .md-select:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, var(--md-sys-color-surface-container));
+  border-color: var(--md-sys-color-on-surface);
+}
+
+.filter-group .md-select:focus {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+  border-color: var(--md-sys-color-primary);
+}
+
+.filter-group .md-select:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  background-color: var(--md-sys-color-surface-variant);
 }
 
 .filter-group-full {
@@ -795,12 +843,28 @@ onMounted(() => {
 }
 
 .items-per-page-select {
-  padding: var(--md-sys-spacing-xs) var(--md-sys-spacing-sm);
-  border: 1px solid var(--md-sys-color-outline);
-  border-radius: var(--md-sys-shape-corner-small);
-  background-color: var(--md-sys-color-surface);
+  padding: var(--md-sys-spacing-sm) var(--md-sys-spacing-md);
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-highest);
   color: var(--md-sys-color-on-surface);
-  font-size: var(--md-sys-typescale-body-small-size);
+  font-family: var(--md-sys-typescale-body-small-font-family);
+  font-size: var(--md-sys-typescale-body-small-font-size);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
+  box-shadow: var(--md-sys-elevation-level1);
+}
+
+.items-per-page-select:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, var(--md-sys-color-surface-container-highest));
+  box-shadow: var(--md-sys-elevation-level2);
+}
+
+.items-per-page-select:focus {
+  outline: none;
+  background-color: var(--md-sys-color-surface-container-highest);
+  box-shadow: var(--md-sys-elevation-level2);
 }
 
 /* Documents Grid */
@@ -808,16 +872,20 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--md-sys-spacing-md);
+  gap: var(--md-sys-spacing-lg); /* More vertical space between cards */
   margin-bottom: var(--md-sys-spacing-lg);
+  margin-top: var(--md-sys-spacing-md);
 }
 
 .document-card {
   padding: var(--md-sys-spacing-lg);
+  padding-top: calc(var(--md-sys-spacing-lg) + 8px); /* Extra space for category badge */
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: var(--md-sys-spacing-md);
   position: relative;
+  overflow: visible; /* Allow badge to overflow */
 }
 
 /* Category Badge */

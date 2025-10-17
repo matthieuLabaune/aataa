@@ -13,87 +13,8 @@
 
     <!-- Main Content -->
     <div class="home-content">
-      <!-- Search Bar -->
-      <div class="search-container animate-fade-in">
-        <div class="md-search-field">
-          <svg class="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-            <circle cx="8" cy="8" r="6" stroke-width="2"/>
-            <path d="M13 13l4 4" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Rechercher dans les documents..."
-            class="search-input"
-          />
-        </div>
-      </div>
-
-      <!-- Filters -->
-      <div class="filters-container animate-slide-in-up" style="animation-delay: 50ms">
-        <div class="filter-chips">
-          <button
-            @click="filterType = ''"
-            class="md-chip"
-            :class="{ 'md-chip-selected': filterType === '' }"
-          >
-            📂 Tous
-          </button>
-          <button
-            v-for="type in documentTypes"
-            :key="type"
-            @click="filterType = type"
-            class="md-chip"
-            :class="{ 'md-chip-selected': filterType === type }"
-          >
-            {{ type }}
-          </button>
-        </div>
-        <button @click="resetFilters" class="md-icon-button" title="Réinitialiser les filtres">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-            <path d="M1 4v6h6M19 16v-6h-6M4 15.5A8 8 0 1 1 4 4.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-      </div>
-
-      <!-- Stats Cards -->
-      <div class="stats-grid animate-slide-in-up" style="animation-delay: 100ms">
-        <div class="md-card stat-card">
-          <div class="stat-icon">📚</div>
-          <div class="stat-value title-large">{{ stats.total }}</div>
-          <div class="stat-label body-medium">Documents</div>
-        </div>
-        <div class="md-card stat-card">
-          <div class="stat-icon">📂</div>
-          <div class="stat-value title-large">{{ stats.types }}</div>
-          <div class="stat-label body-medium">Types</div>
-        </div>
-        <div class="md-card stat-card">
-          <div class="stat-icon">🏷️</div>
-          <div class="stat-value title-large">{{ stats.tags }}</div>
-          <div class="stat-label body-medium">Tags</div>
-        </div>
-        <div class="md-card stat-card">
-          <div class="stat-icon">💾</div>
-          <div class="stat-value title-large">{{ formatSize(stats.size) }}</div>
-          <div class="stat-label body-medium">Espace</div>
-        </div>
-      </div>
-
-      <!-- OCR Type Selection -->
-      <div class="ocr-selection animate-slide-in-up" style="animation-delay: 125ms">
-        <label for="ocr-type" class="body-medium ocr-label">Type d'OCR</label>
-        <select id="ocr-type" v-model="selectedOcrType" class="md-select">
-          <option value="standard">🔤 Standard (Tesseract)</option>
-          <option value="handwritten">✍️ Écriture manuscrite (TrOCR)</option>
-          <option value="printed">📄 Imprimé (TrOCR)</option>
-          <option value="caption">🖼️ Légende d'image (BLIP)</option>
-        </select>
-      </div>
-
-      <!-- Import Actions & Drag & Drop Zone -->
-      <div class="import-section animate-slide-in-up" style="animation-delay: 150ms">
-        <!-- Drag & Drop Zone -->
+      <!-- Drag & Drop Zone with OCR Selection -->
+      <div class="import-section animate-slide-in-up">
         <div 
           class="drag-drop-zone"
           :class="{ 'drag-over': isDragging }"
@@ -111,7 +32,7 @@
           <p class="body-small drag-drop-hint">PDF, JPG, PNG - Max 50 Mo</p>
         </div>
 
-        <!-- Action Buttons -->
+        <!-- Action Buttons with OCR Selection -->
         <div class="action-buttons">
           <button @click="selectFile" class="md-filled-button md-ripple">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
@@ -125,136 +46,44 @@
             </svg>
             Scanner un dossier
           </button>
+          
+          <!-- OCR Type Selection -->
+          <div class="ocr-type-selector">
+            <label for="ocr-type" class="body-medium">OCR :</label>
+            <select id="ocr-type" v-model="selectedOcrType" class="ocr-select">
+              <option value="standard">Standard</option>
+              <option value="handwritten">Manuscrit</option>
+              <option value="printed">Imprimé</option>
+              <option value="caption">Légende</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <!-- Documents Section -->
-      <div class="documents-section">
-        <div class="section-header">
-          <h2 class="title-large">Documents</h2>
-          <div class="header-actions">
-            <span class="body-large count-badge">{{ filteredDocuments.length }}</span>
-            
-            <!-- Pagination Controls -->
-            <div class="pagination-controls">
-              <select v-model="itemsPerPage" class="items-per-page-select">
-                <option :value="10">10 par page</option>
-                <option :value="25">25 par page</option>
-                <option :value="50">50 par page</option>
-                <option :value="100">100 par page</option>
-                <option :value="filteredDocuments.length">Tous ({{ filteredDocuments.length }})</option>
-              </select>
-            </div>
+      <!-- Dashboard Section -->
+      <div class="dashboard-section animate-slide-in-up" :style="{ animationDelay: documents.length > 0 ? '100ms' : '50ms' }">
+        <h2 class="title-large section-title">Synthèse</h2>
+        <div class="stats-grid">
+          <div class="md-card stat-card">
+            <div class="stat-icon">📚</div>
+            <div class="stat-value title-large">{{ stats.total }}</div>
+            <div class="stat-label body-medium">Documents</div>
           </div>
-        </div>
-
-        <!-- Loading State -->
-        <div v-if="loading" class="loading-state">
-          <div class="loading-skeleton">
-            <div class="md-skeleton md-skeleton-card" v-for="i in 6" :key="i"></div>
+          <div class="md-card stat-card">
+            <div class="stat-icon">📂</div>
+            <div class="stat-value title-large">{{ stats.types }}</div>
+            <div class="stat-label body-medium">Types</div>
           </div>
-        </div>
-
-        <!-- Empty State -->
-        <div v-else-if="filteredDocuments.length === 0" class="empty-state">
-          <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
-            <circle cx="60" cy="60" r="50" :fill="`color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent)`"/>
-            <path d="M40 50h40M40 60h40M40 70h25" stroke="var(--md-sys-color-on-surface-variant)" stroke-width="3" stroke-linecap="round"/>
-          </svg>
-          <h3 class="title-medium">Aucun document</h3>
-          <p class="body-medium">Commencez par importer vos premiers documents</p>
-        </div>
-
-        <!-- Documents Grid -->
-        <div v-else class="documents-grid">
-          <div
-            v-for="(doc, index) in paginatedDocuments"
-            :key="doc.id"
-            class="md-card document-card animate-scale-in"
-            :style="{ animationDelay: `${200 + index * 50}ms` }"
-            @click="selectedDocument = doc"
-          >
-            <!-- Category Badge (top-left corner) -->
-            <div class="category-badge" :style="{ backgroundColor: getCategoryColor(doc.category) }">
-              <span class="material-icons category-icon">{{ getCategoryIcon(doc.category) }}</span>
-              <span class="body-small">{{ doc.category }}</span>
-            </div>
-
-            <div class="card-header">
-              <div class="doc-type-info">
-                <span class="doc-type-chip md-chip">{{ doc.document_type }}</span>
-                <span v-if="doc.subcategory" class="subcategory-text body-small">{{ doc.subcategory }}</span>
-              </div>
-              <button @click.stop="deleteDocument(doc.id)" class="md-icon-button">
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor">
-                  <polyline points="3 4 5 4 17 4" stroke-width="2" stroke-linecap="round"/>
-                  <path d="M15 4v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4m2 0V2a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </button>
-            </div>
-
-            <h3 class="title-medium doc-name">{{ doc.new_name }}</h3>
-
-            <div class="doc-meta body-small">
-              <span class="meta-item">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor">
-                  <rect x="2" y="3" width="10" height="9" rx="1" stroke-width="1.5"/>
-                  <path d="M9 1v4M5 1v4M2 7h10" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-                {{ formatDate(doc.created_at) }}
-              </span>
-              <span class="meta-item">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor">
-                  <path d="M5 1H3a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V9" stroke-width="1.5" stroke-linecap="round"/>
-                  <path d="M12 1h-7v7" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-                {{ formatSize(doc.file_size) }}
-              </span>
-            </div>
-
-            <div v-if="doc.tags.length > 0" class="doc-tags">
-              <span v-for="tag in doc.tags.slice(0, 3)" :key="tag" class="tag-chip md-chip">
-                {{ tag }}
-              </span>
-              <span v-if="doc.tags.length > 3" class="tag-chip md-chip">
-                +{{ doc.tags.length - 3 }}
-              </span>
-            </div>
-
-            <button @click.stop="openDocument(doc)" class="md-filled-button doc-action-btn md-ripple">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
-                <path d="M14 9v4a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h4M10 2h4v4M7 9l7-7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              Ouvrir
-            </button>
+          <div class="md-card stat-card">
+            <div class="stat-icon">🏷️</div>
+            <div class="stat-value title-large">{{ stats.tags }}</div>
+            <div class="stat-label body-medium">Tags</div>
           </div>
-        </div>
-
-        <!-- Pagination Navigation -->
-        <div v-if="totalPages > 1" class="pagination-nav">
-          <button 
-            @click="currentPage = Math.max(1, currentPage - 1)"
-            :disabled="currentPage === 1"
-            class="md-icon-button"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-              <path d="M12 4l-6 6 6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-          
-          <span class="body-medium pagination-info">
-            Page {{ currentPage }} / {{ totalPages }}
-          </span>
-          
-          <button 
-            @click="currentPage = Math.min(totalPages, currentPage + 1)"
-            :disabled="currentPage === totalPages"
-            class="md-icon-button"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-              <path d="M8 4l6 6-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
+          <div class="md-card stat-card">
+            <div class="stat-icon">💾</div>
+            <div class="stat-value title-large">{{ formatSize(stats.size) }}</div>
+            <div class="stat-label body-medium">Espace</div>
+          </div>
         </div>
       </div>
     </div>
@@ -440,22 +269,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import type { Document, DocumentStats } from '../types/document'
 
 const documents = ref<Document[]>([])
 const loading = ref(true)
-const searchQuery = ref('')
-const filterType = ref('')
 const selectedDocument = ref<Document | null>(null)
 const editingDocument = ref<Document | null>(null)
 const selectedOcrType = ref('standard') // Default OCR type
 
-// Pagination state
-const itemsPerPage = ref(25)
-const currentPage = ref(1)
 const isDragging = ref(false)
 
 // Edit form state
@@ -481,46 +305,6 @@ async function loadDocuments() {
   }
 }
 
-// Filtered documents
-const filteredDocuments = computed(() => {
-  let result = documents.value
-
-  if (filterType.value) {
-    result = result.filter(doc => doc.document_type === filterType.value)
-  }
-
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    result = result.filter(doc =>
-      doc.new_name.toLowerCase().includes(query) ||
-      doc.original_name.toLowerCase().includes(query) ||
-      doc.ocr_text.toLowerCase().includes(query) ||
-      doc.tags.some(tag => tag.toLowerCase().includes(query))
-    )
-  }
-
-  return result
-})
-
-// Paginated documents
-const paginatedDocuments = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value
-  const end = start + itemsPerPage.value
-  
-  // Si "Tous" est sélectionné (itemsPerPage === total), retourner tout
-  if (itemsPerPage.value >= filteredDocuments.value.length) {
-    return filteredDocuments.value
-  }
-  
-  return filteredDocuments.value.slice(start, end)
-})
-
-// Total pages
-const totalPages = computed(() => {
-  if (itemsPerPage.value >= filteredDocuments.value.length) return 1
-  return Math.ceil(filteredDocuments.value.length / itemsPerPage.value)
-})
-
 // Stats
 const stats = computed<DocumentStats>(() => {
   const types = new Set(documents.value.map(d => d.document_type))
@@ -533,11 +317,6 @@ const stats = computed<DocumentStats>(() => {
     tags: tags.size,
     size
   }
-})
-
-// Get unique types
-const documentTypes = computed(() => {
-  return Array.from(new Set(documents.value.map(d => d.document_type)))
 })
 
 // File selection
@@ -627,25 +406,6 @@ async function openDocument(doc: Document) {
     console.error('Failed to open document:', error)
     alert(`Erreur lors de l'ouverture du document: ${error}`)
   }
-}
-
-// Delete document
-async function deleteDocument(id: string) {
-  if (confirm('Déplacer ce document vers la corbeille ?')) {
-    try {
-      await invoke('delete_document', { id })
-      await loadDocuments()
-      selectedDocument.value = null
-    } catch (error) {
-      console.error('Failed to delete document:', error)
-    }
-  }
-}
-
-// Reset filters
-function resetFilters() {
-  searchQuery.value = ''
-  filterType.value = ''
 }
 
 // Edit document
@@ -739,26 +499,6 @@ function getCategoryIcon(category: string): string {
   }
   return icons[category] || 'folder'
 }
-
-// Get category color
-function getCategoryColor(category: string): string {
-  const colors: Record<string, string> = {
-    'Administratif': '#757575',  // Gray
-    'Financier': '#000000',      // Black
-    'Santé': '#D32F2F',          // Red
-    'Professionnel': '#424242',  // Dark gray
-    'Immobilier': '#616161',     // Medium gray
-    'Académique': '#212121',     // Almost black
-    'Personnel': '#9E9E9E',      // Light gray
-    'Autre': '#BDBDBD'           // Very light gray
-  }
-  return colors[category] || '#BDBDBD'
-}
-
-// Reset page when filters or items per page change
-watch([searchQuery, filterType, itemsPerPage], () => {
-  currentPage.value = 1
-})
 
 onMounted(() => {
   loadDocuments()
@@ -856,22 +596,6 @@ onMounted(() => {
   pointer-events: none;
 }
 
-/* Filters */
-.filters-container {
-  display: flex;
-  gap: var(--md-sys-spacing-md);
-  align-items: center;
-  margin-bottom: var(--md-sys-spacing-xl);
-  flex-wrap: wrap;
-}
-
-.filter-chips {
-  display: flex;
-  gap: var(--md-sys-spacing-sm);
-  flex-wrap: wrap;
-  flex: 1;
-}
-
 /* Stats Grid */
 .stats-grid {
   display: grid;
@@ -906,20 +630,40 @@ onMounted(() => {
   align-items: center;
   gap: var(--md-sys-spacing-sm);
   padding: var(--md-sys-spacing-md);
-  background-color: var(--md-sys-color-surface-variant);
-  border-radius: var(--md-sys-shape-corner-small);
-  justify-content: center;
-}
-
-.md-select-compact {
-  padding: var(--md-sys-spacing-xs) var(--md-sys-spacing-md);
+  background-color: var(--md-sys-color-surface);
   border: 1px solid var(--md-sys-color-outline);
   border-radius: var(--md-sys-shape-corner-small);
-  background-color: var(--md-sys-color-surface);
+  margin-top: var(--md-sys-spacing-md);
+}
+
+.ocr-type-inline label {
+  color: var(--md-sys-color-on-surface-variant);
+  font-weight: 500;
+}
+
+.md-select-inline {
+  padding: var(--md-sys-spacing-sm) var(--md-sys-spacing-md);
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-highest);
   color: var(--md-sys-color-on-surface);
-  font-family: var(--md-sys-typescale-body-small-font);
-  font-size: var(--md-sys-typescale-body-small-size);
+  font-family: var(--md-sys-typescale-body-medium-font-family);
+  font-size: var(--md-sys-typescale-body-medium-font-size);
+  font-weight: 500;
   cursor: pointer;
+  transition: all var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
+  box-shadow: var(--md-sys-elevation-level1);
+}
+
+.md-select-inline:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, var(--md-sys-color-surface-container-highest));
+  box-shadow: var(--md-sys-elevation-level2);
+}
+
+.md-select-inline:focus {
+  outline: none;
+  background-color: var(--md-sys-color-surface-container-highest);
+  box-shadow: var(--md-sys-elevation-level2);
 }
 
 /* Dashboard Section */
@@ -927,51 +671,9 @@ onMounted(() => {
   margin-bottom: var(--md-sys-spacing-2xl);
 }
 
-.dashboard-title {
-  display: flex;
-  align-items: center;
-  gap: var(--md-sys-spacing-sm);
+.section-title {
   margin-bottom: var(--md-sys-spacing-lg);
   color: var(--md-sys-color-on-surface);
-}
-
-.dashboard-title .material-icons {
-  font-size: 28px;
-}
-
-/* OCR Selection (old) */
-.ocr-selection {
-  display: flex;
-  flex-direction: column;
-  gap: var(--md-sys-spacing-xs);
-  margin-bottom: var(--md-sys-spacing-lg);
-  max-width: 400px;
-}
-
-.ocr-label {
-  color: var(--md-sys-color-on-surface-variant);
-  font-weight: 500;
-}
-
-.md-select {
-  padding: var(--md-sys-spacing-md) var(--md-sys-spacing-lg);
-  background-color: var(--md-sys-color-surface-variant);
-  color: var(--md-sys-color-on-surface);
-  border: 1px solid var(--md-sys-color-outline);
-  border-radius: var(--md-sys-shape-corner-small);
-  font-family: var(--md-sys-typescale-body-large-font-family);
-  font-size: var(--md-sys-typescale-body-large-font-size);
-  cursor: pointer;
-  transition: all var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
-}
-
-.md-select:hover {
-  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, var(--md-sys-color-surface-variant));
-}
-
-.md-select:focus {
-  outline: 2px solid var(--md-sys-color-primary);
-  outline-offset: 2px;
 }
 
 /* Import Section with Drag & Drop */
@@ -1025,6 +727,45 @@ onMounted(() => {
   display: flex;
   gap: var(--md-sys-spacing-md);
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.ocr-type-selector {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-sm);
+  margin-left: auto;
+}
+
+.ocr-type-selector label {
+  color: var(--md-sys-color-on-surface);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.ocr-select {
+  padding: var(--md-sys-spacing-md) var(--md-sys-spacing-lg);
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+  font-family: inherit;
+  font-size: var(--md-sys-typescale-body-large-font-size);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--md-sys-motion-duration-short2) var(--md-sys-motion-easing-standard);
+  box-shadow: var(--md-sys-elevation-level1);
+  min-width: 160px;
+}
+
+.ocr-select:hover {
+  background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, var(--md-sys-color-surface-container-highest));
+  box-shadow: var(--md-sys-elevation-level2);
+}
+
+.ocr-select:focus {
+  outline: none;
+  box-shadow: var(--md-sys-elevation-level2);
 }
 
 /* Action Section (fallback for old class) */
