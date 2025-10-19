@@ -91,6 +91,7 @@ impl Database {
             ("Administratif", "Déclaration fiscale", true),
             // Financier
             ("Financier", "Facture fournisseur", true),
+            ("Financier", "Facture freelance", true),
             ("Financier", "Facture énergie", true),
             ("Financier", "Facture télécom", true),
             ("Financier", "Relevé bancaire", true),
@@ -160,6 +161,18 @@ impl Database {
             ("Financier", None, "contrat", 1.0),
             ("Financier", None, "€", 1.0),
             ("Financier", None, "eur", 1.0),
+            
+            // Financier - Facture freelance (sous-catégorie spécifique)
+            ("Financier", Some("Facture freelance"), "auto-entrepreneur", 2.0),
+            ("Financier", Some("Facture freelance"), "micro-entreprise", 2.0),
+            ("Financier", Some("Facture freelance"), "siret", 1.5),
+            ("Financier", Some("Facture freelance"), "prestation", 1.5),
+            ("Financier", Some("Facture freelance"), "honoraires", 1.5),
+            ("Financier", Some("Facture freelance"), "tva non applicable", 2.0),
+            ("Financier", Some("Facture freelance"), "franchise en base", 1.5),
+            ("Financier", Some("Facture freelance"), "consulting", 1.0),
+            ("Financier", Some("Facture freelance"), "développement", 1.0),
+            ("Financier", Some("Facture freelance"), "mission", 1.0),
             
             // Santé
             ("Santé", None, "médecin", 1.5),

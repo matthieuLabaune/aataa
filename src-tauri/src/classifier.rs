@@ -356,12 +356,27 @@ impl Classifier {
             MainCategory::Financier => {
                 // Ordre important : vérifier les termes spécifiques d'abord
                 if text.contains("facture") {
-                    // Facture spécifique
-                    if text.contains("edf") || text.contains("électricité") {
+                    // Détecter facture freelance/prestataire
+                    if text.contains("auto-entrepreneur") 
+                        || text.contains("micro-entreprise")
+                        || text.contains("siret")
+                        || text.contains("prestation")
+                        || text.contains("honoraires")
+                        || (text.contains("tva non applicable") || text.contains("franchise en base de tva"))
+                        || text.contains("consulting")
+                        || text.contains("développement")
+                    {
+                        Some("Facture freelance".to_string())
+                    }
+                    // Factures utilitaires
+                    else if text.contains("edf") || text.contains("électricité") || text.contains("gaz") {
                         Some("Facture énergie".to_string())
-                    } else if text.contains("sfr") || text.contains("orange") || text.contains("free") {
+                    } 
+                    else if text.contains("sfr") || text.contains("orange") || text.contains("free") || text.contains("télécom") {
                         Some("Facture télécom".to_string())
-                    } else {
+                    } 
+                    // Facture générique
+                    else {
                         Some("Facture fournisseur".to_string())
                     }
                 } else if text.contains("relevé") || text.contains("iban") {
