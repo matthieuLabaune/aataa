@@ -1,3 +1,4 @@
+mod backup;
 mod classifier;
 mod commands;
 mod database;
@@ -75,6 +76,8 @@ pub fn run() {
             // ML OCR via Python
             commands::extract_handwritten_text,
             commands::generate_image_caption,
+            // Semantic classification
+            commands::classify_semantic,
             // Category management
             commands::get_main_categories,
             commands::get_subcategories,
@@ -86,6 +89,13 @@ pub fn run() {
             commands::add_classification_keyword,
             commands::update_classification_keyword,
             commands::delete_classification_keyword,
+            // Application reset
+            commands::clear_database,
+            commands::reset_application,
+            // Backup/Export
+            commands::export_backup,
+            commands::import_backup,
+            commands::list_backups,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

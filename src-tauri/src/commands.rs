@@ -1,6 +1,7 @@
+use crate::backup::BackupManager;
 use crate::classifier::Classifier;
 use crate::database::Database;
-use crate::models::Document;
+use crate::models::{ClassificationResult, Document, MainCategory};
 use crate::ocr::OcrEngine;
 use chrono::Local;
 use regex::Regex;
@@ -64,17 +65,64 @@ pub async fn process_file(
     // - "caption": BLIP Salesforce/blip-image-captioning-base
     let _ = ocr_type; // Prevent unused variable warning
 
-    let mut ocr = state.ocr.lock().map_err(|e| e.to_string())?;
-    let ocr_text = if path.extension().and_then(|s| s.to_str()) == Some("pdf") {
-        ocr.extract_text_from_pdf(&path)
-            .map_err(|e| e.to_string())?
-    } else {
-        ocr.extract_text_from_image(&path)
-            .map_err(|e| e.to_string())?
+    // Extract OCR text (and release the mutex before async call)
+    let ocr_text = {
+        let mut ocr = state.ocr.lock().map_err(|e| e.to_string())?;
+        if path.extension().and_then(|s| s.to_str()) == Some("pdf") {
+            ocr.extract_text_from_pdf(&path)
+                .map_err(|e| e.to_string())?
+        } else {
+            ocr.extract_text_from_image(&path)
+                .map_err(|e| e.to_string())?
+        }
+    }; // Mutex guard is dropped here
+
+    // Classify document using SEMANTIC CLASSIFICATION (AI-powered)
+    let semantic_result = classify_semantic(ocr_text.clone()).await;
+
+    let classification = match semantic_result {
+        Ok(result) if result["success"].as_bool().unwrap_or(false) => {
+            // Use semantic classification result
+            let category_str = result["category"].as_str().unwrap_or("Autre");
+            let category = match category_str {
+                "Financier" => MainCategory::Financier,
+                "Administratif" => MainCategory::Administratif,
+                "Santé" => MainCategory::Sante,
+                "Professionnel" => MainCategory::Professionnel,
+                "Immobilier" => MainCategory::Immobilier,
+                "Académique" => MainCategory::Academique,
+                "Personnel" => MainCategory::Personnel,
+                _ => MainCategory::Autre,
+            };
+
+            let confidence = result["confidence"].as_f64().unwrap_or(0.0) as f32;
+            let subcategory = result["subcategory"].as_str().map(String::from);
+
+            eprintln!(
+                "✅ Classification sémantique: {} (confiance: {:.0}%)",
+                category_str,
+                confidence * 100.0
+            );
+            if let Some(ref sub) = subcategory {
+                eprintln!("   → Sous-catégorie: {}", sub);
+            }
+
+            ClassificationResult {
+                category,
+                subcategory,
+                suggested_tags: state.classifier.extract_tags(&ocr_text),
+                confidence,
+            }
+        }
+        _ => {
+            // Fallback to old classifier if semantic fails
+            eprintln!(
+                "⚠️  Classification sémantique échouée, utilisation du classifier par défaut"
+            );
+            state.classifier.classify_detailed(&ocr_text)
+        }
     };
 
-    // Classify document (NEW: returns ClassificationResult with category, subcategory, tags)
-    let classification = state.classifier.classify_detailed(&ocr_text);
     let doc_type = state.classifier.classify(&ocr_text); // Keep old method for compatibility
     let new_name = state
         .classifier
@@ -307,6 +355,47 @@ pub async fn update_metadata(
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db.update_document_metadata(&id, &document_type, &tags, &new_name)
         .map_err(|e| e.to_string())
+}
+
+// ========== Semantic Classification Command ==========
+
+/// Classification sémantique via Python (IA)
+#[command]
+pub async fn classify_semantic(text: String) -> Result<serde_json::Value, String> {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+
+    // Appeler le script Python avec le texte en stdin
+    let mut child = Command::new("python3")
+        .arg("python/semantic_classifier.py")
+        .arg("-")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Erreur lancement Python: {}", e))?;
+
+    // Écrire le texte dans stdin
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin
+            .write_all(text.as_bytes())
+            .map_err(|e| format!("Erreur écriture stdin: {}", e))?;
+    }
+
+    // Attendre la fin et récupérer la sortie
+    let output = child
+        .wait_with_output()
+        .map_err(|e| format!("Erreur attente Python: {}", e))?;
+
+    if output.status.success() {
+        // Parser la réponse JSON
+        let result: serde_json::Value = serde_json::from_slice(&output.stdout)
+            .map_err(|e| format!("Erreur parse JSON: {}", e))?;
+        Ok(result)
+    } else {
+        let error = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Erreur classification sémantique: {}", error))
+    }
 }
 
 #[cfg(test)]
@@ -542,7 +631,9 @@ pub async fn generate_image_caption(
     if response.success {
         Ok(response.caption.unwrap_or_default())
     } else {
-        Err(response.error.unwrap_or_else(|| "Erreur inconnue".to_string()))
+        Err(response
+            .error
+            .unwrap_or_else(|| "Erreur inconnue".to_string()))
     }
 }
 
@@ -576,16 +667,15 @@ pub async fn add_subcategory(
 }
 
 #[command]
-pub async fn delete_subcategory(
-    id: i64,
-    state: tauri::State<'_, AppState>,
-) -> Result<(), String> {
+pub async fn delete_subcategory(id: i64, state: tauri::State<'_, AppState>) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db.delete_subcategory(id).map_err(|e| e.to_string())
 }
 
 #[command]
-pub async fn get_all_tags(state: tauri::State<'_, AppState>) -> Result<Vec<crate::models::Tag>, String> {
+pub async fn get_all_tags(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<crate::models::Tag>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db.get_all_tags().map_err(|e| e.to_string())
 }
@@ -635,4 +725,87 @@ pub async fn delete_classification_keyword(
     let db = state.db.lock().map_err(|e| e.to_string())?;
     db.delete_classification_keyword(id)
         .map_err(|e| e.to_string())
+}
+
+// ========== Application Reset Commands ==========
+
+/// Vide la base de données (garde les fichiers sur disque)
+#[command]
+pub async fn clear_database(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+
+    db.clear_all_documents()
+        .map_err(|e| format!("Erreur lors du vidage de la base: {}", e))?;
+
+    eprintln!("✅ Base de données vidée (fichiers conservés)");
+    Ok(())
+}
+
+/// Réinitialisation complète : supprime DB + fichiers archivés
+#[command]
+pub async fn reset_application(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let archive_path = state.archive_path.lock().map_err(|e| e.to_string())?;
+
+    // 1. Supprimer tous les fichiers archivés
+    if archive_path.exists() {
+        eprintln!("🗑️  Suppression des fichiers dans {:?}", archive_path);
+        std::fs::remove_dir_all(&*archive_path)
+            .map_err(|e| format!("Erreur suppression fichiers: {}", e))?;
+        std::fs::create_dir_all(&*archive_path)
+            .map_err(|e| format!("Erreur recréation dossier: {}", e))?;
+    }
+
+    // 2. Vider la base de données
+    db.clear_all_documents()
+        .map_err(|e| format!("Erreur vidage documents: {}", e))?;
+
+    // 3. Réinitialiser les sous-catégories personnalisées
+    db.reset_custom_subcategories()
+        .map_err(|e| format!("Erreur reset sous-catégories: {}", e))?;
+
+    // 4. Réinitialiser les mots-clés personnalisés (garder les prédéfinis)
+    db.reset_custom_keywords()
+        .map_err(|e| format!("Erreur reset mots-clés: {}", e))?;
+
+    eprintln!("✅ Application réinitialisée complètement");
+    Ok(())
+}
+
+// ========== Backup/Export Commands ==========
+
+/// Exporte tous les documents dans un fichier ZIP
+#[command]
+pub async fn export_backup(
+    output_path: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<String, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let archive_path = state.archive_path.lock().map_err(|e| e.to_string())?;
+
+    let backup_manager = BackupManager::new(archive_path.clone());
+    backup_manager.export_backup(&db, std::path::Path::new(&output_path))
+}
+
+/// Importe un backup depuis un fichier ZIP
+#[command]
+pub async fn import_backup(
+    backup_path: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<String, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let archive_path = state.archive_path.lock().map_err(|e| e.to_string())?;
+
+    let backup_manager = BackupManager::new(archive_path.clone());
+    backup_manager.import_backup(&db, std::path::Path::new(&backup_path))
+}
+
+/// Liste les fichiers de backup disponibles dans un dossier
+#[command]
+pub async fn list_backups(backup_dir: String) -> Result<Vec<String>, String> {
+    let backups = BackupManager::list_backups(std::path::Path::new(&backup_dir))?;
+    Ok(backups
+        .iter()
+        .map(|p| p.to_string_lossy().to_string())
+        .collect())
 }
