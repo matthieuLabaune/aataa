@@ -240,7 +240,7 @@
 
       <!-- Pagination Navigation -->
       <div v-if="totalPages > 1" class="pagination-nav">
-        <button 
+        <button
           @click="currentPage = Math.max(1, currentPage - 1)"
           :disabled="currentPage === 1"
           class="md-icon-button"
@@ -249,12 +249,12 @@
             <path d="M12 4l-6 6 6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        
+
         <span class="body-medium pagination-info">
           Page {{ currentPage }} / {{ totalPages }}
         </span>
-        
-        <button 
+
+        <button
           @click="currentPage = Math.min(totalPages, currentPage + 1)"
           :disabled="currentPage === totalPages"
           class="md-icon-button"
@@ -562,7 +562,7 @@ function resetFilters() {
 // Delete document
 async function deleteDocument(id: string) {
   if (!confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) return
-  
+
   try {
     await invoke('delete_document', { id })
     await loadDocuments()
@@ -575,7 +575,7 @@ async function deleteDocument(id: string) {
 // Open document
 async function openDocument(doc: Document) {
   try {
-    await invoke('open_file', { path: doc.file_path })
+    await invoke('open_file', { file_path: doc.file_path })
   } catch (error) {
     console.error('Failed to open document:', error)
     alert(`Erreur lors de l'ouverture: ${error}`)
