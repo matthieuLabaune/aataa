@@ -1,8 +1,11 @@
-# Dépendances pour TrOCR et BLIP
+# Dépendances pour ML OCR et Classification
 torch>=2.0.0
 transformers>=4.30.0
 Pillow>=10.0.0
 accelerate>=0.20.0
+
+# Classification sémantique (NOUVEAU - bien plus précis que les mots-clés!)
+sentence-transformers>=2.2.0
 
 # Optionnel: pour GPU
 # Installer CUDA manuellement si GPU disponible
