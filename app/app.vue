@@ -711,7 +711,10 @@ async function processMultipleFiles(files: string[]) {
     const batchResults = await Promise.allSettled(
       batch.map(async (filePath) => {
         try {
-          const doc = await invoke<Document>('process_file', { filePath })
+          const doc = await invoke<Document>('process_file', { 
+            file_path: filePath,
+            ocr_type: 'standard'
+          })
           processedFiles.value++
           return doc
         } catch (error) {
@@ -751,7 +754,7 @@ async function processFile(filePath: string) {
   showMessage('⏳ Traitement en cours...', 10000)
 
   try {
-    const doc = await invoke<Document>('process_file', { filePath })
+    const doc = await invoke<Document>('process_file', { file_path: filePath, ocr_type: 'standard' })
     console.log('Document processed:', doc)
     documents.value.unshift(doc)
     showMessage(`✅ Document archivé!\n${doc.document_type}: ${doc.new_name}`, 5000)
