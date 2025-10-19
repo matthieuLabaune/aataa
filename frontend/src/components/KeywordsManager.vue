@@ -9,8 +9,8 @@
 
       <div class="keywords-list">
         <!-- Mots-clés existants -->
-        <div 
-          v-for="kw in getKeywordsForCategory(category)" 
+        <div
+          v-for="kw in getKeywordsForCategory(category)"
           :key="kw.id"
           class="keyword-item"
         >
@@ -21,14 +21,14 @@
             </span>
           </div>
           <div class="keyword-actions">
-            <button 
+            <button
               @click="startEditing(kw)"
               class="btn-icon"
               title="Modifier"
             >
               <span class="material-icons">edit</span>
             </button>
-            <button 
+            <button
               @click="handleDelete(kw)"
               class="btn-icon btn-delete"
               title="Supprimer"
@@ -39,7 +39,7 @@
         </div>
 
         <!-- Bouton d'ajout -->
-        <button 
+        <button
           v-if="!isAdding[category]"
           @click="startAdding(category)"
           class="add-keyword-btn"
@@ -202,7 +202,7 @@ async function handleSave(category: MainCategory) {
       await addKeyword(category, null, trimmedKeyword, formData.value.weight)
       successMessage.value = `Mot-clé "${trimmedKeyword}" ajouté`
     }
-    
+
     cancelEditing()
     setTimeout(() => successMessage.value = null, 3000)
   } catch (e) {

@@ -98,7 +98,7 @@ export function useClassificationKeywords() {
         keywords,
         loading,
         error,
-        
+
         // Actions
         loadKeywords,
         addKeyword,

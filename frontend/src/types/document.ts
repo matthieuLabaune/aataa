@@ -24,7 +24,7 @@ export interface DocumentStats {
 
 // ===== NOUVEAUX TYPES POUR LE SYSTÈME DE CATÉGORIES =====
 
-export type MainCategory = 
+export type MainCategory =
     | 'Administratif'
     | 'Financier'
     | 'Santé'

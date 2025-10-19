@@ -8,15 +8,15 @@
 
       <div class="subcategories-list">
         <!-- Sous-catégories existantes -->
-        <div 
-          v-for="sub in getSubcategoriesFor(category)" 
+        <div
+          v-for="sub in getSubcategoriesFor(category)"
           :key="sub.id"
           class="subcategory-chip"
           :class="{ 'predefined': sub.is_predefined }"
         >
           <span>{{ sub.name }}</span>
-          <button 
-            v-if="!sub.is_predefined" 
+          <button
+            v-if="!sub.is_predefined"
             @click="handleDelete(sub)"
             class="delete-btn"
             :aria-label="`Supprimer ${sub.name}`"
@@ -26,7 +26,7 @@
         </div>
 
         <!-- Bouton d'ajout -->
-        <button 
+        <button
           v-if="!isAdding[category]"
           @click="startAdding(category)"
           class="add-subcategory-btn"
@@ -120,7 +120,7 @@ async function handleAdd(category: MainCategory) {
   const existing = getSubcategoriesFor(category).find(
     sub => sub.name.toLowerCase() === trimmedName.toLowerCase()
   )
-  
+
   if (existing) {
     error.value = `La sous-catégorie "${trimmedName}" existe déjà dans ${category}`
     setTimeout(() => error.value = null, 3000)

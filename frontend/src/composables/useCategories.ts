@@ -133,13 +133,13 @@ export function useCategories() {
         tags,
         loading,
         error,
-        
+
         // Computed
         getSubcategoriesForCategory,
         predefinedSubcategories,
         userSubcategories,
         topTags,
-        
+
         // Actions
         loadCategories,
         loadSubcategories,
