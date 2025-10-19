@@ -2,7 +2,7 @@
   <div id="app" class="app-container">
     <!-- Indicateur de traitement global -->
     <ProcessingIndicator />
-    
+
     <NavigationRail v-if="!isMobile" />
     <main class="main-content">
       <router-view />

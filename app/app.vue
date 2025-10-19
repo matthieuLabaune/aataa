@@ -844,9 +844,10 @@ async function deleteDoc(id: string) {
 
 async function openDocument(filePath: string) {
   try {
-    await invoke('open_file', { filePath })
+    await invoke('open_file', { file_path: filePath })
   } catch (error) {
     console.error('Error opening file:', error)
+    showMessage('❌ Impossible d\'ouvrir le fichier: ' + error, 5000)
   }
 }
 
