@@ -1,5 +1,7 @@
 <template>
   <div class="home">
+    <!-- Onboarding Component -->
+    <Onboarding @complete="handleOnboardingComplete" />
     <!-- Top App Bar -->
     <header class="md-top-app-bar">
       <div class="app-bar-content">
@@ -15,7 +17,7 @@
     <div class="home-content">
       <!-- Drag & Drop Zone with OCR Selection -->
       <div class="import-section animate-slide-in-up">
-        <div 
+        <div
           class="drag-drop-zone"
           :class="{ 'drag-over': isDragging }"
           @dragenter.prevent="handleDragEnter"
@@ -46,7 +48,7 @@
             </svg>
             Scanner un dossier
           </button>
-          
+
           <!-- OCR Type Selection -->
           <div class="ocr-type-selector">
             <label for="ocr-type" class="body-medium">OCR :</label>
@@ -277,6 +279,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { useProcessingState } from '../composables/useProcessingState'
 import type { Document, DocumentStats } from '../types/document'
+import Onboarding from '../components/Onboarding.vue'
 
 const documents = ref<Document[]>([])
 const loading = ref(true)
@@ -285,6 +288,12 @@ const editingDocument = ref<Document | null>(null)
 const selectedOcrType = ref('standard') // Default OCR type
 
 const isDragging = ref(false)
+
+// Onboarding
+function handleOnboardingComplete() {
+  console.log('Onboarding completed!')
+  loadDocuments() // Refresh documents after onboarding
+}
 
 // Edit form state
 const editForm = ref({
@@ -361,21 +370,21 @@ function handleDragLeave(_e: DragEvent) {
 
 async function handleDrop(e: DragEvent) {
   isDragging.value = false
-  
+
   const files = e.dataTransfer?.files
   if (!files || files.length === 0) return
-  
+
   const file = files[0]
   if (!file) return
-  
+
   const validExtensions = ['pdf', 'png', 'jpg', 'jpeg']
   const fileExt = file.name.split('.').pop()?.toLowerCase()
-  
+
   if (!fileExt || !validExtensions.includes(fileExt)) {
     alert('Format non supporté. Utilisez PDF, PNG ou JPG.')
     return
   }
-  
+
   try {
     // Note: Le drag & drop web ne donne pas le chemin système
     // On utilise seulement la sélection de fichier via dialog
@@ -396,7 +405,7 @@ async function scanFolder() {
     if (selected) {
       // 1. Scanner le dossier pour obtenir la liste des fichiers
       const files = await invoke<string[]>('scan_folder', { folderPath: selected })
-      
+
       if (files.length === 0) {
         alert('Aucun fichier supporté trouvé dans ce dossier')
         return
@@ -419,14 +428,14 @@ async function scanFolder() {
         try {
           const fileName = filePath.split('/').pop() || filePath
           console.log(`Traitement: ${fileName}`)
-          
+
           await invoke('process_file', { filePath })
           processed++
-          
+
           // Mettre à jour la progression
           const progress = (processed / files.length) * 100
           updateProgress(folderId, progress)
-          
+
         } catch (error) {
           console.error(`Erreur traitement ${filePath}:`, error)
           errors++
@@ -435,7 +444,7 @@ async function scanFolder() {
 
       // 4. Finaliser
       completeProcessing(folderId)
-      
+
       // 5. Recharger les documents
       await loadDocuments()
 
@@ -455,7 +464,7 @@ async function scanFolder() {
 // Open document
 async function openDocument(doc: Document) {
   try {
-    await invoke('open_file', { filePath: doc.file_path })
+    await invoke('open_file', { file_path: doc.file_path })
   } catch (error) {
     console.error('Failed to open document:', error)
     alert(`Erreur lors de l'ouverture du document: ${error}`)
