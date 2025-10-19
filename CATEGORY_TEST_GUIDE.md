@@ -106,29 +106,29 @@ npm run tauri dev
 
 ### Couleurs des badges par catégorie
 
-| Catégorie | Couleur | Code |
-|-----------|---------|------|
-| Administratif | Gris | #757575 |
-| Financier | Noir | #000000 |
-| Santé | Rouge | #D32F2F |
-| Professionnel | Gris foncé | #424242 |
-| Immobilier | Gris moyen | #616161 |
-| Académique | Presque noir | #212121 |
-| Personnel | Gris clair | #9E9E9E |
-| Autre | Très gris clair | #BDBDBD |
+| Catégorie     | Couleur         | Code    |
+| ------------- | --------------- | ------- |
+| Administratif | Gris            | #757575 |
+| Financier     | Noir            | #000000 |
+| Santé         | Rouge           | #D32F2F |
+| Professionnel | Gris foncé      | #424242 |
+| Immobilier    | Gris moyen      | #616161 |
+| Académique    | Presque noir    | #212121 |
+| Personnel     | Gris clair      | #9E9E9E |
+| Autre         | Très gris clair | #BDBDBD |
 
 ### Icônes Material par catégorie
 
-| Catégorie | Icône |
-|-----------|-------|
-| Administratif | description |
-| Financier | account_balance |
-| Santé | medical_services |
-| Professionnel | work |
-| Immobilier | home |
-| Académique | school |
-| Personnel | person |
-| Autre | folder |
+| Catégorie     | Icône            |
+| ------------- | ---------------- |
+| Administratif | description      |
+| Financier     | account_balance  |
+| Santé         | medical_services |
+| Professionnel | work             |
+| Immobilier    | home             |
+| Académique    | school           |
+| Personnel     | person           |
+| Autre         | folder           |
 
 ---
 
@@ -166,10 +166,10 @@ sqlite3 aataa.db "SELECT COUNT(*) FROM subcategories;"
 ### Documents testés
 
 | Fichier | Catégorie obtenue | Score | Sous-catégorie | Tags | Badge visible | ✅/❌ |
-|---------|-------------------|-------|----------------|------|---------------|-------|
-| | | | | | | |
-| | | | | | | |
-| | | | | | | |
+| ------- | ----------------- | ----- | -------------- | ---- | ------------- | --- |
+|         |                   |       |                |      |               |     |
+|         |                   |       |                |      |               |     |
+|         |                   |       |                |      |               |     |
 
 ### Fonctionnalités testées
 

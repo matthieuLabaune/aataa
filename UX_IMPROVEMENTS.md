@@ -19,7 +19,7 @@
 
 **Code**:
 ```vue
-<div 
+<div
   class="drag-drop-zone"
   :class="{ 'drag-over': isDragging }"
   @dragenter.prevent="handleDragEnter"
@@ -107,7 +107,7 @@
   <h2>Documents</h2>
   <div class="header-actions">
     <span class="count-badge">{{ filteredDocuments.length }}</span>
-    
+
     <div class="pagination-controls">
       <select v-model="itemsPerPage">
         <option :value="10">10 par page</option>
@@ -178,7 +178,7 @@ watch([searchQuery, filterType, itemsPerPage], () => {
 <html lang="fr">
   <head>
     <title>AATAA - Gestion documentaire</title>
-    
+
     <!-- Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   </head>
@@ -205,8 +205,8 @@ watch([searchQuery, filterType, itemsPerPage], () => {
 
 **Solution proposée** :
 ```vue
-<span 
-  class="tag-chip tag-clickable" 
+<span
+  class="tag-chip tag-clickable"
   @click="showTagDetails(tag)"
   :title="getTagValue(doc, tag)"
 >
@@ -257,8 +257,8 @@ watch([searchQuery, filterType, itemsPerPage], () => {
 **Implémentation Frontend** :
 ```vue
 <div class="document-thumbnail">
-  <img 
-    v-if="doc.thumbnail_path" 
+  <img
+    v-if="doc.thumbnail_path"
     :src="convertFileSrc(doc.thumbnail_path)"
     alt="Aperçu"
   />
@@ -274,14 +274,14 @@ watch([searchQuery, filterType, itemsPerPage], () => {
 
 ## 📊 Résumé
 
-| Amélioration | Statut | Difficulté | Impact UX |
-|--------------|--------|-----------|-----------|
-| Zone drag & drop | ✅ Terminé | Facile | ⭐⭐⭐⭐ |
-| Icône settings | ✅ Terminé | Très facile | ⭐⭐⭐ |
-| Pagination | ✅ Terminé | Moyenne | ⭐⭐⭐⭐⭐ |
-| Material Icons | ✅ Terminé | Très facile | ⭐⭐⭐⭐ |
-| Tags cliquables | ⏳ À faire | Facile | ⭐⭐⭐ |
-| Miniatures | ⏳ À faire | Difficile | ⭐⭐⭐⭐⭐ |
+| Amélioration     | Statut    | Difficulté  | Impact UX |
+| ---------------- | --------- | ----------- | --------- |
+| Zone drag & drop | ✅ Terminé | Facile      | ⭐⭐⭐⭐      |
+| Icône settings   | ✅ Terminé | Très facile | ⭐⭐⭐       |
+| Pagination       | ✅ Terminé | Moyenne     | ⭐⭐⭐⭐⭐     |
+| Material Icons   | ✅ Terminé | Très facile | ⭐⭐⭐⭐      |
+| Tags cliquables  | ⏳ À faire | Facile      | ⭐⭐⭐       |
+| Miniatures       | ⏳ À faire | Difficile   | ⭐⭐⭐⭐⭐     |
 
 **Temps estimé restant** :
 - Tags cliquables : ~1h

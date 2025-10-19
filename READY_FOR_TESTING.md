@@ -30,7 +30,7 @@
 - [x] Seuil de confiance 60%
 - [x] Suggestions de sous-catégories contextuelles :
   - EDF détecté → "Facture énergie"
-  - Orange/SFR → "Facture télécom"  
+  - Orange/SFR → "Facture télécom"
   - CPAM → "Remboursement sécu"
   - Ordonnance → "Ordonnance"
   - Fiche de paie → "Fiche de paie"

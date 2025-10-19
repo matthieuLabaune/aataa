@@ -210,7 +210,7 @@ npm run tauri build
 
 1. **Import** : Utilisateur sélectionne un fichier (PDF/PNG/JPG)
 2. **OCR** : Tesseract extrait le texte (multilingue)
-3. **Classification** : 
+3. **Classification** :
    - Chargement des mots-clés depuis DB
    - Scoring par catégorie selon les poids
    - Sélection de la meilleure catégorie

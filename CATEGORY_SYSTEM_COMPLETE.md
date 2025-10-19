@@ -96,12 +96,12 @@ const {
     categories,           // ["Administratif", "Financier"...]
     subcategories,        // [{id, category, name}...]
     tags,                 // [{name, count}...]
-    
+
     loadCategories(),
     loadSubcategories(category?),
     addSubcategory(category, name),
     deleteSubcategory(id),
-    
+
     getSubcategoriesForCategory,
     predefinedSubcategories,
     userSubcategories,
@@ -158,7 +158,7 @@ Interface de gestion des sous-catégories :
       <h2>Catégories et sous-catégories</h2>
       <SubcategoryManager />
     </section>
-    
+
     <section>
       <h2>Tags populaires</h2>
       <div class="tags-cloud">
@@ -175,7 +175,7 @@ Interface de gestion des sous-catégories :
 ```vue
 <!-- Filtres par catégorie -->
 <div class="category-filters">
-  <button 
+  <button
     v-for="cat in categories"
     @click="filterByCategory(cat)"
     :class="{ active: selectedCategory === cat }"
@@ -193,8 +193,8 @@ Interface de gestion des sous-catégories :
 
 <!-- Filtre par tags -->
 <div class="tags-filter">
-  <chip 
-    v-for="tag in allTags" 
+  <chip
+    v-for="tag in allTags"
     @click="toggleTag(tag)"
     :class="{ active: selectedTags.includes(tag) }"
   >
@@ -211,17 +211,17 @@ Interface de gestion des sous-catégories :
     <span class="material-icons">{{ getCategoryIcon(doc.category) }}</span>
     {{ doc.category }}
   </div>
-  
+
   <!-- Sous-catégorie -->
   <div v-if="doc.subcategory" class="subcategory">
     {{ doc.subcategory }}
   </div>
-  
+
   <!-- Tags -->
   <div class="tags">
     <chip v-for="tag in doc.tags">{{ tag }}</chip>
   </div>
-  
+
   <!-- ... reste du document -->
 </div>
 ```

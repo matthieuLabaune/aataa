@@ -115,7 +115,7 @@
 ```
 ┌──────────┐
 │   🔒     │  Logo PaperVault
-│PaperVault│  
+│PaperVault│
 ├──────────┤
 │   🏠     │  Accueil
 │ Accueil  │
@@ -152,23 +152,23 @@
 
 ### Page Home
 
-| Avant (AATAA) | Après (PaperVault) |
-|---------------|-------------------|
+| Avant (AATAA)           | Après (PaperVault)    |
+| ----------------------- | --------------------- |
 | Barre recherche en haut | ❌ Supprimé → Explorer |
-| Filtres par type | ❌ Supprimé → Explorer |
-| Stats cards | ✅ Gardées (Dashboard) |
-| Sélecteur OCR dropdown | ✅ Simplifié (inline) |
-| Import en bas | ✅ Déplacé en haut |
-| Documents grid | ✅ Gardé (simplifié) |
+| Filtres par type        | ❌ Supprimé → Explorer |
+| Stats cards             | ✅ Gardées (Dashboard) |
+| Sélecteur OCR dropdown  | ✅ Simplifié (inline)  |
+| Import en bas           | ✅ Déplacé en haut     |
+| Documents grid          | ✅ Gardé (simplifié)   |
 
 ### Navigation
 
-| Avant | Après |
-|-------|-------|
-| SVG complexes | Material Icons simples |
-| 2 pages (Home, Trash) | 3 pages (Home, Explorer, Trash) |
-| Logo SVG abstrait | 🔒 Coffre-fort + nom |
-| Icône settings confuse | ⚙️ Engrenage clair |
+| Avant                  | Après                           |
+| ---------------------- | ------------------------------- |
+| SVG complexes          | Material Icons simples          |
+| 2 pages (Home, Trash)  | 3 pages (Home, Explorer, Trash) |
+| Logo SVG abstrait      | 🔒 Coffre-fort + nom             |
+| Icône settings confuse | ⚙️ Engrenage clair               |
 
 ---
 
@@ -263,28 +263,28 @@ const selectedTags = ref<string[]>([])
 // Computed avec tous les filtres appliqués
 const filteredDocuments = computed(() => {
   let result = documents.value
-  
+
   // Search query
   if (searchQuery.value) { /* filter by name/ocr/tags */ }
-  
+
   // Category
   if (filterCategory.value) { /* filter */ }
-  
+
   // Subcategory (dynamique)
   if (filterSubcategory.value) { /* filter */ }
-  
+
   // Date range (today, week, month, year)
   if (filterDateRange.value) { /* filter */ }
-  
+
   // Size range (<1Mo, 1-10Mo, >10Mo)
   if (filterSizeRange.value) { /* filter */ }
-  
+
   // Tags (multiple selection)
   if (selectedTags.value.length) { /* filter */ }
-  
+
   // Sort (6 modes)
   result = [...result].sort(...)
-  
+
   return result
 })
 
