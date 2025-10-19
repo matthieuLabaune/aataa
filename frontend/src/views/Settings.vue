@@ -168,6 +168,58 @@
         </div>
       </section>
 
+      <!-- Backup & Export Section -->
+      <section class="settings-section md-card animate-slide-in-up" style="animation-delay: 175ms">
+        <div class="section-header">
+          <div class="section-icon">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor">
+              <path d="M16 4v8m0 0l-4-4m4 4l4-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M8 12H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2V14a2 2 0 0 0-2-2h-2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="title-large">Sauvegarde & Export</h2>
+            <p class="body-medium section-description">Exporter et restaurer vos documents</p>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <label class="label-large">Exporter tous les documents</label>
+            <p class="body-small">Créer une sauvegarde complète au format ZIP</p>
+          </div>
+          <button @click="exportBackup" :disabled="isExporting" class="md-filled-button md-ripple">
+            <svg v-if="!isExporting" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor">
+              <path d="M3 13v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-2M9 11V3m0 0L6 6m3-3l3 3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span v-if="isExporting">Export en cours...</span>
+            <span v-else>Exporter</span>
+          </button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <label class="label-large">Importer une sauvegarde</label>
+            <p class="body-small">Restaurer des documents depuis un fichier ZIP</p>
+          </div>
+          <button @click="importBackup" :disabled="isImporting" class="md-outlined-button md-ripple">
+            <svg v-if="!isImporting" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor">
+              <path d="M3 13v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-2M9 3v8m0 0l-3-3m3 3l3-3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span v-if="isImporting">Import en cours...</span>
+            <span v-else>Importer</span>
+          </button>
+        </div>
+
+        <div v-if="backupMessage" class="success-message">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+            <circle cx="10" cy="10" r="9" stroke-width="2"/>
+            <path d="M6 10l3 3 5-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="body-medium">{{ backupMessage }}</span>
+        </div>
+      </section>
+
       <!-- Danger Zone -->
       <section class="settings-section md-card danger-section animate-slide-in-up" style="animation-delay: 200ms">
         <div class="section-header">
@@ -238,7 +290,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { invoke } from '@tauri-apps/api/core'
-import { open } from '@tauri-apps/plugin-dialog'
+import { open, save } from '@tauri-apps/plugin-dialog'
 import SubcategoryManager from '../components/SubcategoryManager.vue'
 import KeywordsManager from '../components/KeywordsManager.vue'
 
@@ -247,6 +299,9 @@ const archivePath = ref('')
 const archivePathChanged = ref(false)
 const defaultOcrType = ref('standard')
 const confirmReset = ref(false)
+const isExporting = ref(false)
+const isImporting = ref(false)
+const backupMessage = ref('')
 
 // Load settings
 async function loadSettings() {
@@ -288,10 +343,84 @@ async function selectArchivePath() {
   }
 }
 
-// Reset app (TODO: Implement backend command)
-function resetApp() {
-  alert('Fonctionnalité de réinitialisation à implémenter côté backend')
-  confirmReset.value = false
+// Export backup
+async function exportBackup() {
+  try {
+    isExporting.value = true
+
+    // Demander où sauvegarder le fichier
+    const savePath = await save({
+      title: 'Exporter la sauvegarde',
+      defaultPath: `AATAA_Backup_${new Date().toISOString().split('T')[0]}.zip`,
+      filters: [{
+        name: 'ZIP Archive',
+        extensions: ['zip']
+      }]
+    })
+
+    if (savePath) {
+      const result = await invoke<string>('export_backup', { outputPath: savePath })
+      backupMessage.value = result
+
+      // Hide message after 5 seconds
+      setTimeout(() => {
+        backupMessage.value = ''
+      }, 5000)
+    }
+  } catch (error) {
+    console.error('Export failed:', error)
+    alert(`Erreur lors de l'export: ${error}`)
+  } finally {
+    isExporting.value = false
+  }
+}
+
+// Import backup
+async function importBackup() {
+  try {
+    isImporting.value = true
+
+    // Demander quel fichier restaurer
+    const selected = await open({
+      title: 'Importer une sauvegarde',
+      multiple: false,
+      filters: [{
+        name: 'ZIP Archive',
+        extensions: ['zip']
+      }]
+    })
+
+    if (selected) {
+      const result = await invoke<string>('import_backup', { backupPath: selected })
+      backupMessage.value = result
+
+      // Hide message after 5 seconds and reload documents
+      setTimeout(() => {
+        backupMessage.value = ''
+        // Optionally reload the page or emit event to refresh documents list
+        window.location.reload()
+      }, 5000)
+    }
+  } catch (error) {
+    console.error('Import failed:', error)
+    alert(`Erreur lors de l'import: ${error}`)
+  } finally {
+    isImporting.value = false
+  }
+}
+
+// Reset app
+async function resetApp() {
+  try {
+    await invoke('reset_application')
+    alert('Application réinitialisée avec succès')
+    confirmReset.value = false
+    // Reload page to reflect changes
+    window.location.reload()
+  } catch (error) {
+    console.error('Reset failed:', error)
+    alert(`Erreur lors de la réinitialisation: ${error}`)
+  }
 }
 
 // Go back
