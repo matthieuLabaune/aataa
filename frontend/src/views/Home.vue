@@ -404,7 +404,7 @@ async function scanFolder() {
 
     if (selected) {
       // 1. Scanner le dossier pour obtenir la liste des fichiers
-      const files = await invoke<string[]>('scan_folder', { folderPath: selected })
+      const files = await invoke<string[]>('scan_folder', { folder_path: selected })
 
       if (files.length === 0) {
         alert('Aucun fichier supporté trouvé dans ce dossier')
