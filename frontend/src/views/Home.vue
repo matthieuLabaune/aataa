@@ -345,8 +345,8 @@ async function selectFile() {
 
     if (selected) {
       await invoke('process_file', {
-        filePath: selected,
-        ocrType: selectedOcrType.value
+        file_path: selected,
+        ocr_type: selectedOcrType.value
       })
       await loadDocuments()
     }
@@ -429,7 +429,7 @@ async function scanFolder() {
           const fileName = filePath.split('/').pop() || filePath
           console.log(`Traitement: ${fileName}`)
 
-          await invoke('process_file', { filePath })
+          await invoke('process_file', { file_path: filePath, ocr_type: 'standard' })
           processed++
 
           // Mettre à jour la progression
