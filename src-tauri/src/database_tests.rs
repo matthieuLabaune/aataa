@@ -113,7 +113,8 @@ mod tests {
         let doc = create_test_document("notes_test");
         db.insert_document(&doc).unwrap();
 
-        db.update_document_notes("notes_test", Some("Updated notes".to_string())).unwrap();
+        db.update_document_notes("notes_test", Some("Updated notes".to_string()))
+            .unwrap();
 
         let docs = db.get_all_documents().unwrap();
         assert_eq!(docs[0].notes, Some("Updated notes".to_string()));
@@ -129,12 +130,8 @@ mod tests {
         db.insert_document(&doc).unwrap();
 
         let new_tags = vec!["tag1".to_string(), "tag2".to_string()];
-        db.update_document_metadata(
-            "meta_test",
-            "Contrat",
-            &new_tags,
-            "new_filename.pdf"
-        ).unwrap();
+        db.update_document_metadata("meta_test", "Contrat", &new_tags, "new_filename.pdf")
+            .unwrap();
 
         let docs = db.get_all_documents().unwrap();
         assert_eq!(docs[0].document_type, "Contrat");

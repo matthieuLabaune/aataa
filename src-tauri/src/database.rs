@@ -34,7 +34,10 @@ impl Database {
         let _ = conn.execute("ALTER TABLE documents ADD COLUMN deleted_at TEXT", []);
 
         // Add category column if it doesn't exist (NEW - migration)
-        let _ = conn.execute("ALTER TABLE documents ADD COLUMN category TEXT DEFAULT 'Autre'", []);
+        let _ = conn.execute(
+            "ALTER TABLE documents ADD COLUMN category TEXT DEFAULT 'Autre'",
+            [],
+        );
 
         // Add subcategory column if it doesn't exist (NEW - migration)
         let _ = conn.execute("ALTER TABLE documents ADD COLUMN subcategory TEXT", []);
@@ -55,7 +58,8 @@ impl Database {
         )?;
 
         // Insérer les sous-catégories prédéfinies si la table est vide
-        let count: i64 = conn.query_row("SELECT COUNT(*) FROM subcategories", [], |row| row.get(0))?;
+        let count: i64 =
+            conn.query_row("SELECT COUNT(*) FROM subcategories", [], |row| row.get(0))?;
         if count == 0 {
             Self::insert_default_subcategories(&conn)?;
         }
@@ -74,7 +78,10 @@ impl Database {
         )?;
 
         // Insérer les mots-clés par défaut si la table est vide
-        let kw_count: i64 = conn.query_row("SELECT COUNT(*) FROM classification_keywords", [], |row| row.get(0))?;
+        let kw_count: i64 =
+            conn.query_row("SELECT COUNT(*) FROM classification_keywords", [], |row| {
+                row.get(0)
+            })?;
         if kw_count == 0 {
             Self::insert_default_keywords(&conn)?;
         }
@@ -142,7 +149,6 @@ impl Database {
             ("Administratif", None, "déclaration", 1.0),
             ("Administratif", None, "administration", 1.0),
             ("Administratif", None, "officiel", 1.0),
-            
             // Financier
             ("Financier", None, "facture", 2.0),
             ("Financier", None, "invoice", 2.0),
@@ -161,19 +167,37 @@ impl Database {
             ("Financier", None, "contrat", 1.0),
             ("Financier", None, "€", 1.0),
             ("Financier", None, "eur", 1.0),
-            
             // Financier - Facture freelance (sous-catégorie spécifique)
-            ("Financier", Some("Facture freelance"), "auto-entrepreneur", 2.0),
-            ("Financier", Some("Facture freelance"), "micro-entreprise", 2.0),
+            (
+                "Financier",
+                Some("Facture freelance"),
+                "auto-entrepreneur",
+                2.0,
+            ),
+            (
+                "Financier",
+                Some("Facture freelance"),
+                "micro-entreprise",
+                2.0,
+            ),
             ("Financier", Some("Facture freelance"), "siret", 1.5),
             ("Financier", Some("Facture freelance"), "prestation", 1.5),
             ("Financier", Some("Facture freelance"), "honoraires", 1.5),
-            ("Financier", Some("Facture freelance"), "tva non applicable", 2.0),
-            ("Financier", Some("Facture freelance"), "franchise en base", 1.5),
+            (
+                "Financier",
+                Some("Facture freelance"),
+                "tva non applicable",
+                2.0,
+            ),
+            (
+                "Financier",
+                Some("Facture freelance"),
+                "franchise en base",
+                1.5,
+            ),
             ("Financier", Some("Facture freelance"), "consulting", 1.0),
             ("Financier", Some("Facture freelance"), "développement", 1.0),
             ("Financier", Some("Facture freelance"), "mission", 1.0),
-            
             // Santé
             ("Santé", None, "médecin", 1.5),
             ("Santé", None, "docteur", 1.5),
@@ -189,7 +213,6 @@ impl Database {
             ("Santé", None, "cpam", 1.5),
             ("Santé", None, "patient", 1.0),
             ("Santé", None, "consultation", 1.0),
-            
             // Professionnel
             ("Professionnel", None, "salaire", 1.5),
             ("Professionnel", None, "paie", 1.5),
@@ -201,7 +224,6 @@ impl Database {
             ("Professionnel", None, "société", 1.0),
             ("Professionnel", None, "note de frais", 2.0),
             ("Professionnel", None, "frais", 1.0),
-            
             // Immobilier
             ("Immobilier", None, "propriété", 1.5),
             ("Immobilier", None, "immobilier", 2.0),
@@ -213,7 +235,6 @@ impl Database {
             ("Immobilier", None, "logement", 1.0),
             ("Immobilier", None, "diagnostic", 1.5),
             ("Immobilier", None, "copropriété", 1.0),
-            
             // Académique
             ("Académique", None, "université", 1.5),
             ("Académique", None, "diplôme", 1.5),
@@ -224,7 +245,6 @@ impl Database {
             ("Académique", None, "étudiant", 1.0),
             ("Académique", None, "école", 1.0),
             ("Académique", None, "formation", 1.0),
-            
             // Personnel
             ("Personnel", None, "ticket", 1.0),
             ("Personnel", None, "reçu", 1.0),
@@ -234,7 +254,7 @@ impl Database {
 
         for (category, subcategory, keyword, weight) in keywords {
             conn.execute(
-                "INSERT OR IGNORE INTO classification_keywords (category, subcategory, keyword, weight) 
+                "INSERT OR IGNORE INTO classification_keywords (category, subcategory, keyword, weight)
                  VALUES (?1, ?2, ?3, ?4)",
                 rusqlite::params![category, subcategory, keyword, weight],
             )?;
@@ -281,7 +301,9 @@ impl Database {
                     new_name: row.get(2)?,
                     file_path: row.get(3)?,
                     document_type: row.get(4)?,
-                    category: row.get::<_, Option<String>>(5)?.unwrap_or_else(|| "Autre".to_string()),
+                    category: row
+                        .get::<_, Option<String>>(5)?
+                        .unwrap_or_else(|| "Autre".to_string()),
                     subcategory: row.get(6).ok(),
                     confidence: row.get(7).ok(),
                     tags: serde_json::from_str(&row.get::<_, String>(8)?).unwrap_or_default(),
@@ -315,7 +337,9 @@ impl Database {
                     new_name: row.get(2)?,
                     file_path: row.get(3)?,
                     document_type: row.get(4)?,
-                    category: row.get::<_, Option<String>>(5)?.unwrap_or_else(|| "Autre".to_string()),
+                    category: row
+                        .get::<_, Option<String>>(5)?
+                        .unwrap_or_else(|| "Autre".to_string()),
                     subcategory: row.get(6).ok(),
                     confidence: row.get(7).ok(),
                     tags: serde_json::from_str(&row.get::<_, String>(8)?).unwrap_or_default(),
@@ -356,7 +380,9 @@ impl Database {
                     new_name: row.get(2)?,
                     file_path: row.get(3)?,
                     document_type: row.get(4)?,
-                    category: row.get::<_, Option<String>>(5)?.unwrap_or_else(|| "Autre".to_string()),
+                    category: row
+                        .get::<_, Option<String>>(5)?
+                        .unwrap_or_else(|| "Autre".to_string()),
                     subcategory: row.get(6).ok(),
                     confidence: row.get(7).ok(),
                     tags: serde_json::from_str(&row.get::<_, String>(8)?).unwrap_or_default(),
@@ -415,15 +441,19 @@ impl Database {
 
     // ===== NOUVELLES MÉTHODES POUR SOUS-CATÉGORIES =====
 
-    pub fn get_subcategories(&self, category: Option<&str>) -> Result<Vec<crate::models::Subcategory>> {
+    pub fn get_subcategories(
+        &self,
+        category: Option<&str>,
+    ) -> Result<Vec<crate::models::Subcategory>> {
         let query = if let Some(cat) = category {
             format!("SELECT id, category, name, is_predefined FROM subcategories WHERE category = '{}' ORDER BY name", cat)
         } else {
-            "SELECT id, category, name, is_predefined FROM subcategories ORDER BY category, name".to_string()
+            "SELECT id, category, name, is_predefined FROM subcategories ORDER BY category, name"
+                .to_string()
         };
 
         let mut stmt = self.conn.prepare(&query)?;
-        
+
         let subcategories = stmt
             .query_map([], |row| {
                 let category_str: String = row.get(1)?;
@@ -473,7 +503,7 @@ impl Database {
              FROM documents, json_each(documents.tags)
              WHERE deleted_at IS NULL
              GROUP BY tag
-             ORDER BY count DESC, tag"
+             ORDER BY count DESC, tag",
         )?;
 
         let tags = stmt
@@ -490,7 +520,10 @@ impl Database {
 
     // ========== Classification Keywords Methods ==========
 
-    pub fn get_classification_keywords(&self, category: Option<&str>) -> Result<Vec<crate::models::ClassificationKeyword>> {
+    pub fn get_classification_keywords(
+        &self,
+        category: Option<&str>,
+    ) -> Result<Vec<crate::models::ClassificationKeyword>> {
         let query = if let Some(cat) = category {
             format!("SELECT id, category, subcategory, keyword, weight FROM classification_keywords WHERE category = '{}' ORDER BY weight DESC, keyword", cat)
         } else {
@@ -514,7 +547,13 @@ impl Database {
         Ok(keywords)
     }
 
-    pub fn add_classification_keyword(&self, category: &str, subcategory: Option<&str>, keyword: &str, weight: f64) -> Result<i64> {
+    pub fn add_classification_keyword(
+        &self,
+        category: &str,
+        subcategory: Option<&str>,
+        keyword: &str,
+        weight: f64,
+    ) -> Result<i64> {
         self.conn.execute(
             "INSERT INTO classification_keywords (category, subcategory, keyword, weight) VALUES (?1, ?2, ?3, ?4)",
             rusqlite::params![category, subcategory, keyword, weight],
@@ -531,10 +570,30 @@ impl Database {
     }
 
     pub fn delete_classification_keyword(&self, id: i64) -> Result<()> {
-        self.conn.execute(
-            "DELETE FROM classification_keywords WHERE id = ?1",
-            [id],
-        )?;
+        self.conn
+            .execute("DELETE FROM classification_keywords WHERE id = ?1", [id])?;
+        Ok(())
+    }
+
+    // ===== APPLICATION RESET METHODS =====
+
+    /// Vide toutes les entrées de documents (garde les fichiers)
+    pub fn clear_all_documents(&self) -> Result<()> {
+        self.conn.execute("DELETE FROM documents", [])?;
+        Ok(())
+    }
+
+    /// Réinitialise les sous-catégories personnalisées
+    pub fn reset_custom_subcategories(&self) -> Result<()> {
+        self.conn
+            .execute("DELETE FROM subcategories WHERE is_predefined = 0", [])?;
+        Ok(())
+    }
+
+    /// Réinitialise les mots-clés personnalisés (garde les prédéfinis)
+    pub fn reset_custom_keywords(&self) -> Result<()> {
+        self.conn
+            .execute("DELETE FROM classification_keywords WHERE id > 100", [])?;
         Ok(())
     }
 }

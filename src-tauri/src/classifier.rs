@@ -1,9 +1,9 @@
-use crate::models::{DocumentType, MainCategory, ClassificationResult};
 use crate::database::Database;
+use crate::models::{ClassificationResult, DocumentType, MainCategory};
 use chrono::Local;
 use regex::Regex;
-use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 pub struct Classifier {
     patterns: Vec<ClassificationPattern>,
@@ -182,23 +182,27 @@ impl Classifier {
     /// Classification enrichie avec catégorie, sous-catégorie et tags suggérés
     pub fn classify_detailed(&self, text: &str) -> ClassificationResult {
         let text_lower = text.to_lowercase();
-        
+
         // 1. Déterminer la catégorie principale et obtenir le score
         let (category, score) = self.detect_main_category_with_score(&text_lower);
-        
+
         // 2. Suggérer une sous-catégorie basée sur le contenu
         let subcategory = self.suggest_subcategory(&category, &text_lower);
-        
+
         // 3. Extraire les tags automatiquement (avec métadonnées avancées)
         let suggested_tags = self.extract_tags(&text);
-        
+
         // 4. Calculer la confiance basée sur le score des mots-clés
         // Score normalisé : on considère qu'un score de 3.0 = 75% de confiance
         // et on plafonne à 100%
         let confidence = (score / 4.0).min(1.0);
-        
+
         if confidence < 0.3 {
-            eprintln!("⚠️  Catégorie incertaine (score: {:.1}, confiance: {:.2}%) - Type 'Autre' utilisé", score, confidence * 100.0);
+            eprintln!(
+                "⚠️  Catégorie incertaine (score: {:.1}, confiance: {:.2}%) - Type 'Autre' utilisé",
+                score,
+                confidence * 100.0
+            );
             return ClassificationResult {
                 category: MainCategory::Autre,
                 subcategory: None,
@@ -207,11 +211,16 @@ impl Classifier {
             };
         }
 
-        eprintln!("✓ Catégorie finale: {} (score: {:.1}, confiance: {:.2}%)", category.to_string(), score, confidence * 100.0);
+        eprintln!(
+            "✓ Catégorie finale: {} (score: {:.1}, confiance: {:.2}%)",
+            category.to_string(),
+            score,
+            confidence * 100.0
+        );
         if let Some(ref sub) = subcategory {
             eprintln!("  → Sous-catégorie suggérée: {}", sub);
         }
-        
+
         ClassificationResult {
             category,
             subcategory,
@@ -222,7 +231,7 @@ impl Classifier {
 
     fn detect_main_category_with_score(&self, text: &str) -> (MainCategory, f32) {
         let text_lower = text.to_lowercase();
-        
+
         // Charger les mots-clés depuis la base de données
         let keywords = match self.db.lock() {
             Ok(db) => match db.get_classification_keywords(None) {
@@ -240,43 +249,84 @@ impl Classifier {
 
         // Calculer les scores pour chaque catégorie
         let mut category_scores: HashMap<String, f64> = HashMap::new();
-        
+
         for kw in keywords {
             if text_lower.contains(&kw.keyword.to_lowercase()) {
                 let category = kw.category.clone();
                 let keyword = kw.keyword.clone();
                 let weight = kw.weight;
                 *category_scores.entry(category.clone()).or_insert(0.0) += weight;
-                eprintln!("  ✓ Mot-clé trouvé: '{}' → {} (+{:.1})", keyword, category, weight);
+                eprintln!(
+                    "  ✓ Mot-clé trouvé: '{}' → {} (+{:.1})",
+                    keyword, category, weight
+                );
             }
         }
 
         // Trouver la catégorie avec le score le plus élevé
         let mut scores = vec![
-            (MainCategory::Financier, category_scores.get("Financier").copied().unwrap_or(0.0) as f32),
-            (MainCategory::Administratif, category_scores.get("Administratif").copied().unwrap_or(0.0) as f32),
-            (MainCategory::Sante, category_scores.get("Santé").copied().unwrap_or(0.0) as f32),
-            (MainCategory::Professionnel, category_scores.get("Professionnel").copied().unwrap_or(0.0) as f32),
-            (MainCategory::Immobilier, category_scores.get("Immobilier").copied().unwrap_or(0.0) as f32),
-            (MainCategory::Academique, category_scores.get("Académique").copied().unwrap_or(0.0) as f32),
-            (MainCategory::Personnel, category_scores.get("Personnel").copied().unwrap_or(0.0) as f32),
+            (
+                MainCategory::Financier,
+                category_scores.get("Financier").copied().unwrap_or(0.0) as f32,
+            ),
+            (
+                MainCategory::Administratif,
+                category_scores.get("Administratif").copied().unwrap_or(0.0) as f32,
+            ),
+            (
+                MainCategory::Sante,
+                category_scores.get("Santé").copied().unwrap_or(0.0) as f32,
+            ),
+            (
+                MainCategory::Professionnel,
+                category_scores.get("Professionnel").copied().unwrap_or(0.0) as f32,
+            ),
+            (
+                MainCategory::Immobilier,
+                category_scores.get("Immobilier").copied().unwrap_or(0.0) as f32,
+            ),
+            (
+                MainCategory::Academique,
+                category_scores.get("Académique").copied().unwrap_or(0.0) as f32,
+            ),
+            (
+                MainCategory::Personnel,
+                category_scores.get("Personnel").copied().unwrap_or(0.0) as f32,
+            ),
         ];
 
         scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-        
-        eprintln!("  📊 Scores: Financier={:.1}, Administratif={:.1}, Santé={:.1}, Autre={:.1}", 
-            scores.iter().find(|(c, _)| matches!(c, MainCategory::Financier)).map(|(_, s)| s).unwrap_or(&0.0),
-            scores.iter().find(|(c, _)| matches!(c, MainCategory::Administratif)).map(|(_, s)| s).unwrap_or(&0.0),
-            scores.iter().find(|(c, _)| matches!(c, MainCategory::Sante)).map(|(_, s)| s).unwrap_or(&0.0),
+
+        eprintln!(
+            "  📊 Scores: Financier={:.1}, Administratif={:.1}, Santé={:.1}, Autre={:.1}",
+            scores
+                .iter()
+                .find(|(c, _)| matches!(c, MainCategory::Financier))
+                .map(|(_, s)| s)
+                .unwrap_or(&0.0),
+            scores
+                .iter()
+                .find(|(c, _)| matches!(c, MainCategory::Administratif))
+                .map(|(_, s)| s)
+                .unwrap_or(&0.0),
+            scores
+                .iter()
+                .find(|(c, _)| matches!(c, MainCategory::Sante))
+                .map(|(_, s)| s)
+                .unwrap_or(&0.0),
             0.0
         );
-        
+
         let best_score = scores[0].1;
         let best_category = scores[0].0.clone();
-        
+
         // Seuil minimum ajusté : au moins 1 mot-clé de poids normal (1.0)
         if best_score >= 1.0 {
-            eprintln!("  ✅ Catégorie sélectionnée: {} (score: {:.1})", best_category.to_string(), best_score);
+            eprintln!(
+                "  ✅ Catégorie sélectionnée: {} (score: {:.1})",
+                best_category.to_string(),
+                best_score
+            );
             (best_category, best_score)
         } else {
             eprintln!("  ⚠️  Score trop faible ({:.1} < 1.0) → Autre", best_score);
@@ -303,7 +353,7 @@ impl Classifier {
         ];
 
         scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-        
+
         if scores[0].1 > 0.3 {
             scores[0].0.clone()
         } else {
@@ -312,32 +362,73 @@ impl Classifier {
     }
 
     fn score_financier(&self, text: &str) -> f32 {
-        let keywords = ["facture", "invoice", "relevé", "bancaire", "iban", "virement", "crédit", "débit"];
+        let keywords = [
+            "facture", "invoice", "relevé", "bancaire", "iban", "virement", "crédit", "débit",
+        ];
         self.keyword_score(text, &keywords)
     }
 
     fn score_administratif(&self, text: &str) -> f32 {
-        let keywords = ["carte", "identité", "passeport", "attestation", "certificat", "imposition", "fiscal"];
+        let keywords = [
+            "carte",
+            "identité",
+            "passeport",
+            "attestation",
+            "certificat",
+            "imposition",
+            "fiscal",
+        ];
         self.keyword_score(text, &keywords)
     }
 
     fn score_sante(&self, text: &str) -> f32 {
-        let keywords = ["ordonnance", "médical", "médecin", "cpam", "sécurité sociale", "mutuelle", "pharmacie"];
+        let keywords = [
+            "ordonnance",
+            "médical",
+            "médecin",
+            "cpam",
+            "sécurité sociale",
+            "mutuelle",
+            "pharmacie",
+        ];
         self.keyword_score(text, &keywords)
     }
 
     fn score_professionnel(&self, text: &str) -> f32 {
-        let keywords = ["contrat de travail", "fiche de paie", "salaire", "employeur", "urssaf", "bulletin"];
+        let keywords = [
+            "contrat de travail",
+            "fiche de paie",
+            "salaire",
+            "employeur",
+            "urssaf",
+            "bulletin",
+        ];
         self.keyword_score(text, &keywords)
     }
 
     fn score_immobilier(&self, text: &str) -> f32 {
-        let keywords = ["bail", "location", "loyer", "propriété", "acte", "notaire", "diagnostic"];
+        let keywords = [
+            "bail",
+            "location",
+            "loyer",
+            "propriété",
+            "acte",
+            "notaire",
+            "diagnostic",
+        ];
         self.keyword_score(text, &keywords)
     }
 
     fn score_academique(&self, text: &str) -> f32 {
-        let keywords = ["article", "publication", "thèse", "diplôme", "université", "recherche", "doi"];
+        let keywords = [
+            "article",
+            "publication",
+            "thèse",
+            "diplôme",
+            "université",
+            "recherche",
+            "doi",
+        ];
         self.keyword_score(text, &keywords)
     }
 
@@ -357,24 +448,31 @@ impl Classifier {
                 // Ordre important : vérifier les termes spécifiques d'abord
                 if text.contains("facture") {
                     // Détecter facture freelance/prestataire
-                    if text.contains("auto-entrepreneur") 
+                    if text.contains("auto-entrepreneur")
                         || text.contains("micro-entreprise")
                         || text.contains("siret")
                         || text.contains("prestation")
                         || text.contains("honoraires")
-                        || (text.contains("tva non applicable") || text.contains("franchise en base de tva"))
+                        || (text.contains("tva non applicable")
+                            || text.contains("franchise en base de tva"))
                         || text.contains("consulting")
                         || text.contains("développement")
                     {
                         Some("Facture freelance".to_string())
                     }
                     // Factures utilitaires
-                    else if text.contains("edf") || text.contains("électricité") || text.contains("gaz") {
+                    else if text.contains("edf")
+                        || text.contains("électricité")
+                        || text.contains("gaz")
+                    {
                         Some("Facture énergie".to_string())
-                    } 
-                    else if text.contains("sfr") || text.contains("orange") || text.contains("free") || text.contains("télécom") {
+                    } else if text.contains("sfr")
+                        || text.contains("orange")
+                        || text.contains("free")
+                        || text.contains("télécom")
+                    {
                         Some("Facture télécom".to_string())
-                    } 
+                    }
                     // Facture générique
                     else {
                         Some("Facture fournisseur".to_string())
@@ -384,7 +482,7 @@ impl Classifier {
                 } else {
                     None
                 }
-            },
+            }
             MainCategory::Sante => {
                 if text.contains("ordonnance") {
                     Some("Ordonnance".to_string())
@@ -395,7 +493,7 @@ impl Classifier {
                 } else {
                     None
                 }
-            },
+            }
             MainCategory::Professionnel => {
                 if text.contains("fiche de paie") || text.contains("salaire") {
                     Some("Fiche de paie".to_string())
@@ -404,7 +502,7 @@ impl Classifier {
                 } else {
                     None
                 }
-            },
+            }
             _ => None,
         }
     }
@@ -515,11 +613,11 @@ impl Classifier {
     fn extract_amount(&self, text: &str) -> Option<String> {
         // Chercher les montants avec € ou EUR
         let patterns = vec![
-            r"total\s*[:\s]*(\d+[\s,.]?\d+[.,]\d{2})\s*€",  // Total: 1234.56 €
-            r"(\d+[\s,.]?\d+[.,]\d{2})\s*€",                // 1234.56 €
-            r"(\d+[\s,.]?\d+[.,]\d{2})\s*eur",              // 1234.56 EUR
+            r"total\s*[:\s]*(\d+[\s,.]?\d+[.,]\d{2})\s*€", // Total: 1234.56 €
+            r"(\d+[\s,.]?\d+[.,]\d{2})\s*€",               // 1234.56 €
+            r"(\d+[\s,.]?\d+[.,]\d{2})\s*eur",             // 1234.56 EUR
         ];
-        
+
         for pattern in patterns {
             if let Ok(re) = Regex::new(pattern) {
                 if let Some(caps) = re.captures(&text.to_lowercase()) {
@@ -534,12 +632,12 @@ impl Classifier {
 
     fn extract_invoice_number(&self, text: &str) -> Option<String> {
         let patterns = vec![
-            r"facture\s*n[°º]\s*[:\s]*(\d{4}-\d{3})",           // Facture N° 2024-004
-            r"facture\s*n[°º]\s*[:\s]*([\d-]+)",                // Facture N° 2024-004
-            r"invoice\s*#?\s*[:\s]*([\d-]+)",                   // Invoice #2024-004
-            r"n[°º]\s*facture\s*[:\s]*([\d-]+)",                // N° facture 2024-004
+            r"facture\s*n[°º]\s*[:\s]*(\d{4}-\d{3})", // Facture N° 2024-004
+            r"facture\s*n[°º]\s*[:\s]*([\d-]+)",      // Facture N° 2024-004
+            r"invoice\s*#?\s*[:\s]*([\d-]+)",         // Invoice #2024-004
+            r"n[°º]\s*facture\s*[:\s]*([\d-]+)",      // N° facture 2024-004
         ];
-        
+
         for pattern in patterns {
             if let Ok(re) = Regex::new(pattern) {
                 if let Some(caps) = re.captures(&text.to_lowercase()) {
@@ -559,16 +657,17 @@ impl Classifier {
             r"(?i)(?:client|à|pour)\s*[:\s]*([A-ZÉÈÊÀÂÔÛÇ][a-zéèêàâôûç]+(?:\s+[A-ZÉÈÊÀÂÔÛÇ][a-zéèêàâôûç]+)+)",
             r"([A-ZÉÈÊÀÂÔÛÇ][a-zéèêàâôûç]+\s+[A-ZÉÈÊÀÂÔÛÇ][a-zéèêàâôûç]+)\s*\(\s*ei\s*\)", // Nom (EI)
         ];
-        
+
         for pattern in patterns {
             if let Ok(re) = Regex::new(pattern) {
                 if let Some(caps) = re.captures(text) {
                     if let Some(m) = caps.get(1) {
                         let name = m.as_str().trim().to_string();
                         // Vérifier que ce n'est pas un mot commun
-                        if !name.to_lowercase().contains("facture") 
+                        if !name.to_lowercase().contains("facture")
                             && !name.to_lowercase().contains("client")
-                            && name.len() > 5 {
+                            && name.len() > 5
+                        {
                             return Some(name);
                         }
                     }
@@ -593,14 +692,14 @@ impl Classifier {
             ("ratp", "RATP"),
             ("gray matter technology", "Gray Matter Technology"),
         ];
-        
+
         let text_lower = text.to_lowercase();
         for (search, display) in entities {
             if text_lower.contains(search) {
                 return Some(display.to_string());
             }
         }
-        
+
         None
     }
 
